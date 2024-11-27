@@ -1,0 +1,213 @@
+services:
+  db:
+    image: mysql:8.0
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    command: --max_connections=2000
+    volumes:
+      - app-db-data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    networks:
+      - default
+
+  redis:
+    image: redis:6
+    restart: always
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+
+  prestart-auth:
+    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+    command: bash /app/scripts/prestart.sh
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FRONTEND_HOST=${FRONTEND_HOST}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
+      - MYSQL_SERVER=db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_URL=redis://redis:6379
+    platform: linux/amd64
+
+  prestart-users:
+    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+    command: bash /app/scripts/prestart.sh
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FRONTEND_HOST=${FRONTEND_HOST}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
+      - MYSQL_SERVER=db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_URL=redis://redis:6379
+    platform: linux/amd64
+
+  auth-service:
+    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    env_file:
+      - .env
+    environment:
+      - DOMAIN=${DOMAIN?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT}
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FRONTEND_HOST=${FRONTEND_HOST}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
+      - MYSQL_SERVER=db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_URL=redis://redis:6379
+    restart: always
+    platform: linux/amd64
+    deploy:
+      replicas: ${AUTH_REPLICAS?Variable not set}
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      prestart-auth:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/utils/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - traefik-public
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+
+      - traefik.http.services.${STACK_NAME?Variable not set}-auth.loadbalancer.server.port=8000
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.rule=Host(`auth.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.entrypoints=http
+
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.rule=Host(`auth.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.tls=true
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.tls.certresolver=le
+
+      # Enable redirection for HTTP and HTTPS
+      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.middlewares=https-redirect
+
+  users-service:
+      image: '${DOCKER_IMAGE_USERS?Variable not set}:${TAG-latest}'
+      env_file:
+        - .env
+      environment:
+        - DOMAIN=${DOMAIN?Variable not set}
+        - ENVIRONMENT=${ENVIRONMENT}
+        - PROJECT_NAME=${PROJECT_NAME}
+        - FRONTEND_HOST=${FRONTEND_HOST}
+        - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+        - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
+        - MYSQL_SERVER=db
+        - MYSQL_DATABASE=${MYSQL_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - REDIS_URL=redis://redis:6379
+      restart: always
+      platform: linux/amd64
+      deploy:
+        replicas: ${USERS_REPLICAS?Variable not set}
+        restart_policy:
+          condition: on-failure
+      depends_on:
+        db:
+          condition: service_healthy
+          restart: true
+        redis:
+          condition: service_healthy
+          restart: true
+        # prestart-users:
+        #   condition: service_completed_successfully
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/utils/health"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      networks:
+        - traefik-public
+        - default
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik-public
+        - traefik.constraint-label=traefik-public
+
+        - traefik.http.services.${STACK_NAME?Variable not set}-users.loadbalancer.server.port=8000
+
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.rule=Host(`users.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.entrypoints=http
+
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.rule=Host(`users.${DOMAIN?Variable not set}`)
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.entrypoints=https
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.tls=true
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.tls.certresolver=le
+
+        # Enable redirection for HTTP and HTTPS
+        - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.middlewares=https-redirect
+
+volumes:
+  app-db-data:
+
+networks:
+  traefik-public:
+    external: true
