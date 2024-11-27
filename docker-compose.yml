@@ -35,6 +35,8 @@ services:
 
   prestart-auth:
     image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    build:
+      context: ./services/auth
     networks:
       - traefik-public
       - default
@@ -63,7 +65,9 @@ services:
     platform: linux/amd64
 
   prestart-users:
-    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    image: '${DOCKER_IMAGE_USERS?Variable not set}:${TAG-latest}'
+    build:
+      context: ./services/users
     networks:
       - traefik-public
       - default

@@ -59,16 +59,6 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls.certresolver=le
       - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
-  prestart-auth:
-    restart: "no"
-    build:
-      context: ./services/auth
-
-  # prestart-users:
-  #   restart: "no"
-  #   build:
-  #     context: ./services/users
-
   auth-service:
     restart: "no"
     build:
