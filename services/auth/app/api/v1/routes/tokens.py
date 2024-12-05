@@ -13,9 +13,9 @@ from app.crud import (
     get_refresh_token,
 )
 from app.schemas import (
-    Message,
     RefreshTokensPublic,
 )
+from shared_lib.schemas import Message
 
 router = APIRouter()
 

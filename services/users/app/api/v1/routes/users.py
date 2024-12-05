@@ -14,11 +14,11 @@ from app.crud import (
     update_user_username,
 )
 from app.schemas import (
-    Message,
     UpdatePassword,
     UpdateUsername,
-    UserPublic,
 )
+
+from shared_lib.schemas import Message, UserPublic
 
 router = APIRouter()
 

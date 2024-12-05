@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.core.database import session_manager
 from app.main import app
-from app.models import RefreshTokens, Users
+from shared_lib.models import Users
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -19,8 +19,6 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
     async with session_manager.session_maker() as session:
         yield session
 
-        statement = delete(RefreshTokens)
-        await session.execute(statement)
         statement = delete(Users)
         await session.execute(statement)
         await session.commit()

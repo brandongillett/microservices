@@ -1,10 +1,9 @@
-from datetime import datetime
 from uuid import UUID
 
 from pydantic import EmailStr
 from sqlmodel import SQLModel
 
-from app.models import RefreshTokenBase, UserBase
+from app.models import UserBase
 
 
 # Token schemas
@@ -17,34 +16,7 @@ class TokenData(SQLModel):
     user_id: UUID
 
 
-# Refresh token schemas
-class RefreshTokenCreate(SQLModel):
-    refresh_jti: UUID
-    access_jti: UUID
-    user_id: UUID
-    created: datetime
-    expires: datetime
-    last_used: datetime
-    ip_address: str
-
-
-class RefreshTokenPublic(RefreshTokenBase):
-    id: UUID
-    user_id: UUID
-
-
-class RefreshTokensPublic(SQLModel):
-    refresh_tokens: list[RefreshTokenPublic]
-    count: int
-
-
 # User schemas
-class UserCreate(SQLModel):
-    username: str
-    email: EmailStr
-    password: str
-
-
 class UserPublic(UserBase):
     id: UUID
 
@@ -56,8 +28,3 @@ class UpdateUsername(SQLModel):
 class UpdatePassword(SQLModel):
     current_password: str
     new_password: str
-
-
-# Message model
-class Message(SQLModel):
-    message: str

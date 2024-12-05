@@ -7,8 +7,10 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud import create_refresh_token, create_user
-from app.models import RefreshTokens, Users
-from app.schemas import RefreshTokenCreate, UserCreate
+from app.models import RefreshTokens
+from shared_lib.models import Users
+from app.schemas import RefreshTokenCreate
+from shared_lib.schemas import UserCreate
 
 test_password = "Password@2"
 

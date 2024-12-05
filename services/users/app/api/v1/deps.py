@@ -17,7 +17,7 @@ from app.core.security import (
     security_settings,
 )
 from app.crud import get_user
-from app.models import Users
+from shared_lib.models import Users
 from app.schemas import TokenData
 
 credential_exception = HTTPException(

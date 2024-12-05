@@ -4,8 +4,8 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
-from app.models import Users
-from app.schemas import UserCreate
+from shared_lib.models import Users
+from shared_lib.schemas import UserCreate
 
 
 # CRUD operations for Users

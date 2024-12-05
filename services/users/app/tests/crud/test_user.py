@@ -7,7 +7,7 @@ from app.crud import (
     update_user_password,
     update_user_username,
 )
-from app.schemas import UserCreate
+from shared_lib.schemas import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string, test_password
 
 

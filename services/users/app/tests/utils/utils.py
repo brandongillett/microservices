@@ -5,8 +5,8 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud import create_user
-from app.models import Users
-from app.schemas import UserCreate
+from shared_lib.models import Users
+from shared_lib.schemas import UserCreate
 
 test_password = "Password@2"
 

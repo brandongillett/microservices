@@ -30,7 +30,8 @@ from app.crud import (
     get_user_by_email,
     get_user_by_username,
 )
-from app.schemas import RefreshTokenCreate, Token, UserCreate, UserPublic
+from app.schemas import RefreshTokenCreate, Token
+from shared_lib.schemas import UserCreate, UserPublic
 
 router = APIRouter()
 

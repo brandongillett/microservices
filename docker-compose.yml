@@ -63,6 +63,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
+    volumes:
+      - ./services/shared_lib:/app/shared_lib
 
   prestart-users:
     image: '${DOCKER_IMAGE_USERS?Variable not set}:${TAG-latest}'
@@ -94,6 +96,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
+    volumes:
+      - ./services/shared_lib:/app/shared_lib
 
   auth-service:
     image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
@@ -181,8 +185,8 @@ services:
         redis:
           condition: service_healthy
           restart: true
-        # prestart-users:
-        #   condition: service_completed_successfully
+        prestart-users:
+          condition: service_completed_successfully
       healthcheck:
         test: ["CMD", "curl", "-f", "http://localhost:8000/utils/health"]
         interval: 10s

@@ -78,10 +78,11 @@ services:
           ignore:
             - app/alembic
             - htmlcov
+            - shared_lib
     volumes:
       - ./services/auth/htmlcov:/app/htmlcov
       - ./services/auth/app/alembic:/app/app/alembic
-      # - ./services/shared_lib:/app/shared_lib
+      - ./services/shared_lib:/app/shared_lib
 
   users-service:
     restart: "no"
@@ -102,10 +103,11 @@ services:
           ignore:
             - app/alembic
             - htmlcov
+            - shared_lib
     volumes:
       - ./services/users/htmlcov:/app/htmlcov
       - ./services/users/app/alembic:/app/app/alembic
-      # - ./services/shared_lib:/app/shared_lib
+      - ./services/shared_lib:/app/shared_lib
 
 volumes:
   app-db-data:

@@ -13,7 +13,7 @@ from app.core.security import (
     security_settings,
 )
 from app.crud import create_user
-from app.schemas import UserCreate
+from shared_lib.schemas import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string, test_password
 
 
