@@ -1,11 +1,8 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
 from shared_lib.models import Users
-
-from app.core.security import security_settings
 
 
 # Base models

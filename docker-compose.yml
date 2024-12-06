@@ -1,17 +1,42 @@
 services:
+  proxy:
+    image: traefik:3.1.6
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "80:80"
+    command:
+      - --providers.docker
+      - --providers.docker.constraints=Label(`traefik.constraint-label`, `traefik-public`)
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+      - --accesslog
+      - --log
+      - --log.level=DEBUG
+      - --api
+      - --api.insecure=true
+    labels:
+      - traefik.enable=true
+      - traefik.constraint-label=traefik-public
+      - traefik.http.middlewares.https-redirect.contenttype.autodetect=false
+      - traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.traefik-dashboard.entrypoints=http
+      - traefik.http.routers.traefik-dashboard.service=api@internal
+      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=80
+    networks:
+      - traefik-public
+      - default
+
   db:
     image: mysql:8.0
     env_file:
       - .env
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-    command: --max_connections=2000
     volumes:
       - app-db-data:/var/lib/mysql
-    restart: always
+      - ./mysql:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -23,7 +48,6 @@ services:
 
   redis:
     image: redis:6
-    restart: always
     networks:
       - default
     healthcheck:
@@ -33,8 +57,29 @@ services:
       start_period: 30s
       timeout: 10s
 
+  adminer:
+    image: adminer
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      - db
+    environment:
+      - ADMINER_DESIGN=pepa-linha-dark
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.rule=Host(`adminer.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.middlewares=https-redirect
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.rule=Host(`adminer.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.entrypoints=https
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls=true
+      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls.certresolver=le
+      - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
+
   prestart-auth:
-    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
     build:
       context: ./services/auth
     networks:
@@ -58,16 +103,15 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
       - ./services/shared_lib:/app/shared_lib
 
   prestart-users:
-    image: '${DOCKER_IMAGE_USERS?Variable not set}:${TAG-latest}'
     build:
       context: ./services/users
     networks:
@@ -91,19 +135,35 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
       - ./services/shared_lib:/app/shared_lib
 
   auth-service:
-    image: '${DOCKER_IMAGE_AUTH?Variable not set}:${TAG-latest}'
+    build:
+      context: ./services/auth
+    command:
+      - fastapi
+      - run
+      - --reload
+      - "app/main.py"
+    develop:
+      watch:
+        - path: ./services/auth
+          action: sync
+          target: /app
+          ignore:
+            - app/alembic
+            - htmlcov
+            - shared_lib
     env_file:
       - .env
     environment:
+      - PYTHONASYNCIODEBUG=1
       - DOMAIN=${DOMAIN?Variable not set}
       - ENVIRONMENT=${ENVIRONMENT}
       - PROJECT_NAME=${PROJECT_NAME}
@@ -111,9 +171,9 @@ services:
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - REDIS_URL=redis://redis:6379
     restart: always
     platform: linux/amd64
@@ -138,6 +198,10 @@ services:
     networks:
       - traefik-public
       - default
+    volumes:
+      - ./services/auth/htmlcov:/app/htmlcov
+      - ./services/auth/app/alembic:/app/app/alembic
+      - ./services/shared_lib:/app/shared_lib
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -148,19 +212,27 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.rule=Host(`auth.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.entrypoints=http
 
-      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.rule=Host(`auth.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.tls=true
-      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-https.tls.certresolver=le
-
-      # Enable redirection for HTTP and HTTPS
-      - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.middlewares=https-redirect
-
   users-service:
-      image: '${DOCKER_IMAGE_USERS?Variable not set}:${TAG-latest}'
+      build:
+        context: ./services/users
+      command:
+        - fastapi
+        - run
+        - --reload
+        - "app/main.py"
+      develop:
+        watch:
+          - path: ./services/users
+            action: sync
+            target: /app
+            ignore:
+              - app/alembic
+              - htmlcov
+              - shared_lib
       env_file:
         - .env
       environment:
+        - PYTHONASYNCIODEBUG=1
         - DOMAIN=${DOMAIN?Variable not set}
         - ENVIRONMENT=${ENVIRONMENT}
         - PROJECT_NAME=${PROJECT_NAME}
@@ -168,9 +240,9 @@ services:
         - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
         - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
         - MYSQL_SERVER=db
-        - MYSQL_DATABASE=${MYSQL_DATABASE}
-        - MYSQL_USER=${MYSQL_USER}
-        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - MYSQL_DATABASE=${USERS_AUTH_DB}
+        - MYSQL_USER=root
+        - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
         - REDIS_URL=redis://redis:6379
       restart: always
       platform: linux/amd64
@@ -195,6 +267,10 @@ services:
       networks:
         - traefik-public
         - default
+      volumes:
+        - ./services/users/htmlcov:/app/htmlcov
+        - ./services/users/app/alembic:/app/app/alembic
+        - ./services/shared_lib:/app/shared_lib
       labels:
         - traefik.enable=true
         - traefik.docker.network=traefik-public
@@ -205,17 +281,9 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.rule=Host(`users.${DOMAIN?Variable not set}`)
         - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.entrypoints=http
 
-        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.rule=Host(`users.${DOMAIN?Variable not set}`)
-        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.entrypoints=https
-        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.tls=true
-        - traefik.http.routers.${STACK_NAME?Variable not set}-users-https.tls.certresolver=le
-
-        # Enable redirection for HTTP and HTTPS
-        - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.middlewares=https-redirect
-
 volumes:
   app-db-data:
 
 networks:
   traefik-public:
-    external: true
+    external: false

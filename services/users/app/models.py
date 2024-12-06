@@ -1,12 +1,10 @@
 from datetime import datetime
-from uuid import UUID, uuid4
 
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, SQLModel
 
 from app.core.security import security_settings
 
-from shared_lib.models import Users
 
 
 # Base models
@@ -21,14 +19,3 @@ class UserBase(SQLModel):
     created: datetime = Field(default_factory=datetime.utcnow)
     disabled: bool = False
     role: str = Field(default="user")
-
-
-# Database models
-# class Users(UserBase, table=True):
-#     id: UUID = Field(default_factory=uuid4, primary_key=True)
-#     password: str
-#     refresh_tokens: list["RefreshTokens"] = Relationship(
-#         back_populates="user",
-#         sa_relationship_kwargs={"lazy": "selectin"},
-#         cascade_delete=True,
-#     )
