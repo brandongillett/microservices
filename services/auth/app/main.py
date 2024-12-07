@@ -2,15 +2,16 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
+from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
-from pydantic_settings import BaseSettings
 
 from app.api.v1.main import api_router as v1_router
 from app.core.config import settings
 from app.core.database import session_manager
 from app.core.redis import redis_client
 from app.core.security import rate_limit_exceeded_handler, rate_limiter
+
 
 class app_settings(BaseSettings):
     TITLE: str = f"{settings.PROJECT_NAME} [Auth]"
@@ -25,7 +26,9 @@ class app_settings(BaseSettings):
     - Allows users to view and revoke their refresh tokens.
     """
 
+
 app_settings = app_settings()  # type: ignore
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
@@ -63,10 +66,10 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # Mount versions to the main app
 app_v1 = FastAPI(
-    version="v1", 
-    title=app_settings.TITLE, 
-    description=app_settings.DESCRIPTION, 
-    docs_url=settings.DOCS_URL
+    version="v1",
+    title=app_settings.TITLE,
+    description=app_settings.DESCRIPTION,
+    docs_url=settings.DOCS_URL,
 )
 
 app_v1.include_router(v1_router)

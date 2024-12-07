@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
+from shared_lib.models import Users
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
@@ -17,7 +18,6 @@ from app.core.security import (
     security_settings,
 )
 from app.crud import get_user
-from shared_lib.models import Users
 from app.schemas import TokenData
 
 credential_exception = HTTPException(

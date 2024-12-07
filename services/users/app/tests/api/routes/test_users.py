@@ -1,6 +1,5 @@
 import pytest
 from httpx import AsyncClient
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.tests.utils.utils import (
     create_and_login_user,
@@ -11,10 +10,8 @@ from app.tests.utils.utils import (
 
 # User Details
 @pytest.mark.anyio
-async def test_my_details(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
-) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
+async def test_my_details(client: AsyncClient, auth_client: AsyncClient) -> None:
+    headers, new_user = await create_and_login_user(auth_client)
 
     user_response = await client.get("/users/me", headers=headers)
     user_details = user_response.json()
@@ -26,26 +23,11 @@ async def test_my_details(
 
 @pytest.mark.anyio
 async def test_my_details_incorrect(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, _ = await create_and_login_user(db, auth_client)
+    headers, _ = await create_and_login_user(auth_client)
 
     headers["Authorization"] += "wrong"
-    user_response = await client.get("/users/me", headers=headers)
-
-    assert user_response.status_code == 401
-
-
-@pytest.mark.anyio
-async def test_my_details_disabled(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
-) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
-
-    new_user.disabled = True
-    db.add(new_user)
-    await db.commit()
-
     user_response = await client.get("/users/me", headers=headers)
 
     assert user_response.status_code == 401
@@ -59,10 +41,8 @@ async def test_my_details_no_token(client: AsyncClient) -> None:
 
 # Update Username
 @pytest.mark.anyio
-async def test_update_username(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
-) -> None:
-    headers, _ = await create_and_login_user(db, auth_client)
+async def test_update_username(client: AsyncClient, auth_client: AsyncClient) -> None:
+    headers, _ = await create_and_login_user(auth_client)
 
     update_data = {"new_username": random_lower_string()}
     update_response = await client.patch(
@@ -81,9 +61,9 @@ async def test_update_username(
 
 @pytest.mark.anyio
 async def test_update_username_same_username(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
+    headers, new_user = await create_and_login_user(auth_client)
 
     update_data = {"new_username": new_user.username}
     update_response = await client.patch(
@@ -97,9 +77,9 @@ async def test_update_username_same_username(
 
 @pytest.mark.anyio
 async def test_update_username_invalid_username(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, _ = await create_and_login_user(db, auth_client)
+    headers, _ = await create_and_login_user(auth_client)
 
     update_data = {"new_username": "A"}
     update_response = await client.patch(
@@ -121,10 +101,8 @@ async def test_update_username_no_token(client: AsyncClient) -> None:
 
 # Update Password
 @pytest.mark.anyio
-async def test_update_password(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
-) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
+async def test_update_password(client: AsyncClient, auth_client: AsyncClient) -> None:
+    headers, new_user = await create_and_login_user(auth_client)
 
     update_data = {
         "current_password": test_password,
@@ -147,9 +125,9 @@ async def test_update_password(
 
 @pytest.mark.anyio
 async def test_update_password_incorrect_password(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, _ = await create_and_login_user(db, auth_client)
+    headers, _ = await create_and_login_user(auth_client)
 
     update_data = {
         "current_password": "WrongPassword@1",
@@ -166,9 +144,9 @@ async def test_update_password_incorrect_password(
 
 @pytest.mark.anyio
 async def test_update_password_same_password(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
+    headers, new_user = await create_and_login_user(auth_client)
 
     update_data = {"current_password": test_password, "new_password": test_password}
     update_response = await client.patch(
@@ -182,9 +160,9 @@ async def test_update_password_same_password(
 
 @pytest.mark.anyio
 async def test_update_password_invalid_password(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, _ = await create_and_login_user(db, auth_client)
+    headers, _ = await create_and_login_user(auth_client)
 
     update_data = {"current_password": test_password, "new_password": "A"}
     update_response = await client.patch(

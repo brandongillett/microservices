@@ -1,2 +1,4 @@
+.mypy_cache
+.ruff_cache
 todo.txt
 .envrc

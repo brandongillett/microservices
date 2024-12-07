@@ -1,33 +1,12 @@
 from uuid import UUID
 
+from shared_lib.models import Users
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.security import get_password_hash, verify_password
-from shared_lib.models import Users
-from shared_lib.schemas import UserCreate
-
 
 # CRUD operations for Users
-async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
-    """
-    Create a new user.
-
-    Args:
-        session (AsyncSession): The database session.
-        user_create (UserCreate): The user create request body.
-
-    Returns:
-        Users: The created user.
-    """
-    dbObj = Users.model_validate(
-        user_create, update={"password": get_password_hash(user_create.password)}
-    )
-    session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
-
-    return dbObj
 
 
 async def get_user(session: AsyncSession, user_id: UUID) -> Users | None:

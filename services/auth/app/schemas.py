@@ -1,9 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
+from pydantic import EmailStr
+from shared_lib.models import RefreshTokenBase
 from sqlmodel import SQLModel
-
-from app.models import RefreshTokenBase
 
 
 # Token schemas
@@ -14,6 +14,13 @@ class Token(SQLModel):
 
 class TokenData(SQLModel):
     user_id: UUID
+
+
+# User schemas
+class UserCreate(SQLModel):
+    username: str
+    email: EmailStr
+    password: str
 
 
 # Refresh token schemas

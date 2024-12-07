@@ -9,7 +9,7 @@ from app.crud import (
     get_user_by_email,
     get_user_by_username,
 )
-from shared_lib.schemas import UserCreate
+from app.schemas import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string, test_password
 
 

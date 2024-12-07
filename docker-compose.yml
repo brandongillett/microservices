@@ -35,7 +35,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
-      - app-db-data:/var/lib/mysql
+      - db-data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -97,15 +97,15 @@ services:
       - .env
     environment:
       - DOMAIN=${DOMAIN?Variable not set}
-      - ENVIRONMENT=${ENVIRONMENT}
-      - PROJECT_NAME=${PROJECT_NAME}
-      - FRONTEND_HOST=${FRONTEND_HOST}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - ENVIRONMENT=${ENVIRONMENT?Variable not set}
+      - PROJECT_NAME=${PROJECT_NAME?Variable not set}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
@@ -129,15 +129,15 @@ services:
       - .env
     environment:
       - DOMAIN=${DOMAIN?Variable not set}
-      - ENVIRONMENT=${ENVIRONMENT}
-      - PROJECT_NAME=${PROJECT_NAME}
-      - FRONTEND_HOST=${FRONTEND_HOST}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
-      - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
+      - ENVIRONMENT=${ENVIRONMENT?Variable not set}
+      - PROJECT_NAME=${PROJECT_NAME?Variable not set}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+      - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
@@ -165,22 +165,18 @@ services:
     environment:
       - PYTHONASYNCIODEBUG=1
       - DOMAIN=${DOMAIN?Variable not set}
-      - ENVIRONMENT=${ENVIRONMENT}
-      - PROJECT_NAME=${PROJECT_NAME}
-      - FRONTEND_HOST=${FRONTEND_HOST}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - ENVIRONMENT=${ENVIRONMENT?Variable not set}
+      - PROJECT_NAME=${PROJECT_NAME?Variable not set}
+      - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
-      - MYSQL_DATABASE=${USERS_AUTH_DB}
+      - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
     restart: always
     platform: linux/amd64
-    deploy:
-      replicas: ${AUTH_REPLICAS?Variable not set}
-      restart_policy:
-        condition: on-failure
     depends_on:
       db:
         condition: service_healthy
@@ -234,22 +230,18 @@ services:
       environment:
         - PYTHONASYNCIODEBUG=1
         - DOMAIN=${DOMAIN?Variable not set}
-        - ENVIRONMENT=${ENVIRONMENT}
-        - PROJECT_NAME=${PROJECT_NAME}
-        - FRONTEND_HOST=${FRONTEND_HOST}
-        - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
-        - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set}
+        - ENVIRONMENT=${ENVIRONMENT?Variable not set}
+        - PROJECT_NAME=${PROJECT_NAME?Variable not set}
+        - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
+        - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+        - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set?Variable not set}
         - MYSQL_SERVER=db
-        - MYSQL_DATABASE=${USERS_AUTH_DB}
+        - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
         - MYSQL_USER=root
-        - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
         - REDIS_URL=redis://redis:6379
       restart: always
       platform: linux/amd64
-      deploy:
-        replicas: ${USERS_REPLICAS?Variable not set}
-        restart_policy:
-          condition: on-failure
       depends_on:
         db:
           condition: service_healthy
@@ -282,7 +274,7 @@ services:
         - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.entrypoints=http
 
 volumes:
-  app-db-data:
+  db-data:
 
 networks:
   traefik-public:

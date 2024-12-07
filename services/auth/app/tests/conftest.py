@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+from shared_lib.models import Users
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,7 +10,6 @@ from app.core.config import settings
 from app.core.database import session_manager
 from app.main import app
 from app.models import RefreshTokens
-from shared_lib.models import Users
 
 
 @pytest.fixture(scope="session", autouse=True)

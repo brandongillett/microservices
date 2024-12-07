@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
+from shared_lib.schemas import Message, UserPublic
 
 from app.api.v1.deps import async_session_dep, current_user
 from app.core.security import (
@@ -17,8 +18,6 @@ from app.schemas import (
     UpdatePassword,
     UpdateUsername,
 )
-
-from shared_lib.schemas import Message, UserPublic
 
 router = APIRouter()
 

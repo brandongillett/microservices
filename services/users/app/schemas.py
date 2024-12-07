@@ -1,9 +1,6 @@
 from uuid import UUID
 
-from pydantic import EmailStr
 from sqlmodel import SQLModel
-
-from app.models import UserBase
 
 
 # Token schemas
@@ -17,10 +14,6 @@ class TokenData(SQLModel):
 
 
 # User schemas
-class UserPublic(UserBase):
-    id: UUID
-
-
 class UpdateUsername(SQLModel):
     new_username: str
 
