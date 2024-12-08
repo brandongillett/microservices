@@ -10,7 +10,7 @@ from app.api.v1.main import api_router as v1_router
 from app.core.config import settings
 from app.core.database import session_manager
 from app.core.redis import redis_client
-from app.core.security import rate_limit_exceeded_handler, rate_limiter
+from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 
 
 class app_settings(BaseSettings):

@@ -11,11 +11,7 @@ from app.core.security import (
     gen_token,
     get_client_ip,
     get_login_attempts,
-    get_token_jti,
     increment_login_attempts,
-    is_password_complex,
-    is_username_complex,
-    rate_limiter,
     reset_login_attempts,
     security_settings,
 )
@@ -27,11 +23,16 @@ from app.crud import (
     delete_max_tokens,
     delete_refresh_token,
     get_refresh_tokens,
-    get_user_by_email,
-    get_user_by_username,
 )
 from app.schemas import RefreshTokenCreate, Token, UserCreate
+from libs.auth_lib.core.security import (
+    get_token_jti,
+    is_password_complex,
+    is_username_complex,
+)
+from libs.auth_lib.crud import get_user_by_email, get_user_by_username
 from libs.auth_lib.schemas import UserPublic
+from libs.utils_lib.core.security import rate_limiter
 
 router = APIRouter()
 

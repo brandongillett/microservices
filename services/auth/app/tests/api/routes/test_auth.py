@@ -8,13 +8,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.config import api_settings
 from app.core.security import (
     gen_token,
-    get_token_jti,
-    is_access_token_blacklisted,
     security_settings,
 )
 from app.crud import create_user
 from app.schemas import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string, test_password
+from libs.auth_lib.core.security import get_token_jti, is_access_token_blacklisted
 
 
 @pytest.mark.anyio

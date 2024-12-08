@@ -21,7 +21,7 @@ class settings(BaseSettings):
     PROJECT_NAME: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     FRONTEND_HOST: str = "http://localhost:5173"
-    USERS_SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str = secrets.token_urlsafe(32)
     MYSQL_SERVER: str
     MYSQL_DATABASE: str
     MYSQL_PORT: int = 3306
@@ -82,7 +82,7 @@ class settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:
-        self._check_default_secret("USERS_SECRET_KEY", self.USERS_SECRET_KEY)
+        self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("MYSQL_PASSWORD", self.MYSQL_PASSWORD)
 
         return self

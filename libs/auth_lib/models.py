@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
 
-from app.core.security import security_settings
+from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 
 
 # Base models
@@ -12,8 +12,8 @@ class UserBase(SQLModel):
     username: str = Field(
         unique=True,
         index=True,
-        min_length=security_settings.USERNAME_MIN_LENGTH,
-        max_length=security_settings.USERNAME_MAX_LENGTH,
+        min_length=auth_lib_security_settings.USERNAME_MIN_LENGTH,
+        max_length=auth_lib_security_settings.USERNAME_MAX_LENGTH,
     )
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     created: datetime = Field(default_factory=datetime.utcnow)

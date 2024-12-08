@@ -13,10 +13,6 @@ class Token(SQLModel):
     token_type: str
 
 
-class TokenData(SQLModel):
-    user_id: UUID
-
-
 # User schemas
 class UserCreate(SQLModel):
     username: str

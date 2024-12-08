@@ -1,16 +1,4 @@
-from uuid import UUID
-
 from sqlmodel import SQLModel
-
-
-# Token schemas
-class Token(SQLModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(SQLModel):
-    user_id: UUID
 
 
 # User schemas

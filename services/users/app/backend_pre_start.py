@@ -5,7 +5,8 @@ from sqlmodel import select
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 
 from app.core.database import session_manager
-from app.core.redis import RedisClient, redis_client
+from app.core.redis import redis_client
+from libs.utils_lib.core.redis import RedisClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

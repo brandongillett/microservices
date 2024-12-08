@@ -101,7 +101,7 @@ services:
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
@@ -133,7 +133,7 @@ services:
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-      - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set?Variable not set}
+      - SECRET_KEY=${SECRET_KEY?Variable not set?Variable not set}
       - MYSQL_SERVER=db
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
@@ -169,7 +169,7 @@ services:
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY?Variable not set}
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
       - MYSQL_SERVER=db
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=root
@@ -233,7 +233,7 @@ services:
         - PROJECT_NAME=${PROJECT_NAME?Variable not set}
         - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
         - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-        - USERS_SECRET_KEY=${USERS_SECRET_KEY?Variable not set?Variable not set}
+        - SECRET_KEY=${SECRET_KEY?Variable not set?Variable not set}
         - MYSQL_SERVER=db
         - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
         - MYSQL_USER=root

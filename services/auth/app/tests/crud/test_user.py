@@ -1,16 +1,14 @@
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.security import verify_password
 from app.crud import (
     authenticate_user,
     create_user,
-    get_user,
-    get_user_by_email,
-    get_user_by_username,
 )
 from app.schemas import UserCreate
 from app.tests.utils.utils import random_email, random_lower_string, test_password
+from libs.auth_lib.core.security import verify_password
+from libs.auth_lib.crud import get_user, get_user_by_email, get_user_by_username
 
 
 @pytest.mark.anyio

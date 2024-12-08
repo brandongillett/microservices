@@ -11,14 +11,16 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.database import session_manager
-from app.core.security import (
+from libs.auth_lib.core.security import (
     get_token_jti,
     is_access_token_blacklisted,
-    security_settings,
 )
-from app.crud import get_user
-from app.schemas import TokenData
+from libs.auth_lib.core.security import (
+    security_settings as auth_lib_security_settings,
+)
+from libs.auth_lib.crud import get_user
 from libs.auth_lib.models import Users
+from libs.auth_lib.schemas import TokenData
 
 credential_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,7 +62,9 @@ async def get_user_from_token(session: async_session_dep, token: str) -> Users:
     try:
         # Decode the token and get the user id
         payload = jwt.decode(
-            token, settings.USERS_SECRET_KEY, algorithms=[security_settings.ALGORITHM]
+            token,
+            settings.SECRET_KEY,
+            algorithms=[auth_lib_security_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")
 
