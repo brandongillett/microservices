@@ -3,7 +3,6 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
-from shared_lib.schemas import UserPublic
 
 from app.api.config import api_settings
 from app.api.v1.deps import async_session_dep, credential_exception, get_user_from_token
@@ -32,6 +31,7 @@ from app.crud import (
     get_user_by_username,
 )
 from app.schemas import RefreshTokenCreate, Token, UserCreate
+from libs.auth_lib.schemas import UserPublic
 
 router = APIRouter()
 

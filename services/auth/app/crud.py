@@ -1,14 +1,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from shared_lib.models import Users
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.config import api_settings
 from app.core.security import get_password_hash, verify_password
-from app.models import RefreshTokens
 from app.schemas import RefreshTokenCreate, UserCreate
+from libs.auth_lib.models import RefreshTokens, Users
 
 
 # CRUD operations for Users

@@ -7,7 +7,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from shared_lib.models import Users
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
@@ -19,6 +18,7 @@ from app.core.security import (
 )
 from app.crud import get_user
 from app.schemas import TokenData
+from libs.auth_lib.models import Users
 
 credential_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,

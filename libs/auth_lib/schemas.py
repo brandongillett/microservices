@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlmodel import SQLModel
 
-from shared_lib.models import UserBase
+from libs.auth_lib.models import UserBase
 
 
 # User schemas

@@ -2,8 +2,9 @@ from datetime import datetime
 from uuid import UUID
 
 from pydantic import EmailStr
-from shared_lib.models import RefreshTokenBase
 from sqlmodel import SQLModel
+
+from libs.auth_lib.models import RefreshTokenBase
 
 
 # Token schemas

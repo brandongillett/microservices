@@ -1,14 +1,15 @@
+from uuid import UUID
+
 import pytest
 from httpx import AsyncClient
-from shared_lib.models import Users
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.security import verify_password
 from app.crud import (
     update_user_password,
     update_user_username,
 )
 from app.tests.utils.utils import random_email, random_lower_string, test_password
+from libs.auth_lib.models import Users
 
 
 @pytest.mark.anyio
@@ -20,13 +21,23 @@ async def test_update_user_username(db: AsyncSession, auth_client: AsyncClient) 
         "/auth/register",
         json={"username": username, "email": email, "password": test_password},
     )
-    new_user = Users(**create_response.json())
+    create_response_data = create_response.json()
+    create_response_data["id"] = UUID(create_response_data["id"])
+    new_user = Users(**create_response_data)
+    await db.commit()
 
     new_username = random_lower_string()
 
-    await update_user_username(session=db, user=new_user, new_username=new_username)
+    await update_user_username(
+        session=db, user_id=new_user.id, new_username=new_username
+    )
 
-    assert new_user.username == new_username
+    login_response = await auth_client.post(
+        "/auth/login",
+        data={"username": new_username, "password": test_password},
+    )
+
+    assert login_response.status_code == 200
 
 
 @pytest.mark.anyio
@@ -38,9 +49,21 @@ async def test_update_user_password(db: AsyncSession, auth_client: AsyncClient) 
         "/auth/register",
         json={"username": username, "email": email, "password": test_password},
     )
-    new_user = Users(**create_response.json())
+    create_response_data = create_response.json()
+    create_response_data["id"] = UUID(create_response_data["id"])
+    new_user = Users(**create_response_data)
+
+    await db.commit()
 
     new_password = "NewPassword@2"
-    await update_user_password(session=db, user=new_user, new_password=new_password)
 
-    assert verify_password(new_password, new_user.password)
+    await update_user_password(
+        session=db, user_id=new_user.id, new_password=new_password
+    )
+
+    login_response = await auth_client.post(
+        "/auth/login",
+        data={"username": username, "password": new_password},
+    )
+
+    assert login_response.status_code == 200

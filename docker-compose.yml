@@ -109,7 +109,7 @@ services:
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
-      - ./services/shared_lib:/app/shared_lib
+      - ./libs:/app/libs
 
   prestart-users:
     build:
@@ -141,7 +141,7 @@ services:
       - REDIS_URL=redis://redis:6379
     platform: linux/amd64
     volumes:
-      - ./services/shared_lib:/app/shared_lib
+      - ./libs:/app/libs
 
   auth-service:
     build:
@@ -159,7 +159,7 @@ services:
           ignore:
             - app/alembic
             - htmlcov
-            - shared_lib
+            - libs
     env_file:
       - .env
     environment:
@@ -197,7 +197,7 @@ services:
     volumes:
       - ./services/auth/htmlcov:/app/htmlcov
       - ./services/auth/app/alembic:/app/app/alembic
-      - ./services/shared_lib:/app/shared_lib
+      - ./libs:/app/libs
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public
@@ -222,9 +222,8 @@ services:
             action: sync
             target: /app
             ignore:
-              - app/alembic
               - htmlcov
-              - shared_lib
+              - libs
       env_file:
         - .env
       environment:
@@ -261,8 +260,7 @@ services:
         - default
       volumes:
         - ./services/users/htmlcov:/app/htmlcov
-        - ./services/users/app/alembic:/app/app/alembic
-        - ./services/shared_lib:/app/shared_lib
+        - ./libs:/app/libs
       labels:
         - traefik.enable=true
         - traefik.docker.network=traefik-public

@@ -2,7 +2,9 @@ import random
 import string
 
 from httpx import AsyncClient
-from shared_lib.models import Users
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from libs.auth_lib.models import Users
 
 test_password = "Password@2"
 
@@ -16,7 +18,7 @@ def random_email() -> str:
 
 
 async def create_and_login_user(
-    auth_client: AsyncClient,
+    db: AsyncSession, auth_client: AsyncClient
 ) -> tuple[dict[str, str], Users]:
     """Helper function to create a user and login."""
     username = random_lower_string()
@@ -28,6 +30,8 @@ async def create_and_login_user(
     )
 
     new_user = Users(**create_response.json())
+
+    await db.commit()
 
     login_response = await auth_client.post(
         "/auth/login",

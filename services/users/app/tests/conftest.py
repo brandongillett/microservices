@@ -2,13 +2,13 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from shared_lib.models import Users
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 from app.core.database import session_manager
 from app.main import app
+from libs.auth_lib.models import Users
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -40,7 +40,11 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture(scope="session")
 async def auth_client() -> AsyncGenerator[AsyncClient, None]:
+    auth_url = "http://auth-service:8000"
+    if settings.ENVIRONMENT != "local":
+        auth_url = f"http://auth.{settings.DOMAIN}"
+
     async with AsyncClient(
-        base_url="http://auth-service:8000",
+        base_url=auth_url,
     ) as ac:
         yield ac

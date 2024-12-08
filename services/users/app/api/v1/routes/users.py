@@ -1,7 +1,6 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from shared_lib.schemas import Message, UserPublic
 
 from app.api.v1.deps import async_session_dep, current_user
 from app.core.security import (
@@ -18,6 +17,7 @@ from app.schemas import (
     UpdatePassword,
     UpdateUsername,
 )
+from libs.auth_lib.schemas import Message, UserPublic
 
 router = APIRouter()
 
@@ -73,7 +73,7 @@ async def update_user_name(
 
     # Update the user username
     await update_user_username(
-        session=session, user=current_user, new_username=body.new_username
+        session=session, user_id=current_user.id, new_username=body.new_username
     )
 
     return Message(message=f"Username updated to {body.new_username}")
@@ -114,7 +114,7 @@ async def update_password(
 
     # Update the user password
     await update_user_password(
-        session=session, user=current_user, new_password=body.new_password
+        session=session, user_id=current_user.id, new_password=body.new_password
     )
 
     return Message(message="Password updated successfully")

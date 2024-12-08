@@ -4,12 +4,11 @@ from datetime import datetime
 from uuid import uuid4
 
 from httpx import AsyncClient
-from shared_lib.models import Users
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud import create_refresh_token, create_user
-from app.models import RefreshTokens
 from app.schemas import RefreshTokenCreate, UserCreate
+from libs.auth_lib.models import RefreshTokens, Users
 
 test_password = "Password@2"
 
