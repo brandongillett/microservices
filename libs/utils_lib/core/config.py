@@ -22,12 +22,17 @@ class settings(BaseSettings):
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     FRONTEND_HOST: str = "http://localhost:5173"
     SECRET_KEY: str = secrets.token_urlsafe(32)
+
+    # MySQL settings
     MYSQL_SERVER: str
     MYSQL_DATABASE: str
     MYSQL_PORT: int = 3306
     MYSQL_USER: str
     MYSQL_PASSWORD: str
+
+    # Redis settings
     REDIS_URL: str
+    REDIS_TOKENS_URL: str
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)

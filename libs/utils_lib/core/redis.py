@@ -4,6 +4,8 @@ from typing import Any
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
 
+from libs.utils_lib.core.config import settings
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class RedisClient:
 
             self.client = Redis(connection_pool=self.pool)
             await self.client.ping()
-            logger.info("Successfully established redis connection.")
+            logger.info("Successfully established Redis connection.")
         except RedisError as e:
             logger.error(f"Error connecting to Redis: {e}")
             raise
@@ -69,3 +71,6 @@ class RedisClient:
         if self.client is None:
             raise RedisError("Failed to establish a Redis client connection.")
         return self.client
+
+
+redis_client = RedisClient(redis_url=settings.REDIS_URL)

@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from app.api.config import api_settings
-from app.api.v1.deps import async_session_dep, current_user
 from app.core.security import (
     blacklist_access_token,
 )
@@ -15,7 +14,9 @@ from app.crud import (
 from app.schemas import (
     RefreshTokensPublic,
 )
+from libs.auth_lib.api.deps import current_user
 from libs.auth_lib.schemas import Message
+from libs.utils_lib.api.deps import async_session_dep
 
 router = APIRouter()
 

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # from sqlmodel import SQLModel
-from app.core.config import settings
+from libs.utils_lib.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -59,3 +59,6 @@ class DatabaseSessionManager:
         if self.engine:
             await self.engine.dispose()
             logger.info("Database connection closed.")
+
+
+session_manager = DatabaseSessionManager(database_url=settings.DATABASE_URL)

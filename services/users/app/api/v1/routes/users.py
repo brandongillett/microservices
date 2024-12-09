@@ -2,7 +2,6 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.api.v1.deps import async_session_dep, current_user
 from app.crud import (
     update_user_password,
     update_user_username,
@@ -11,6 +10,7 @@ from app.schemas import (
     UpdatePassword,
     UpdateUsername,
 )
+from libs.auth_lib.api.deps import current_user
 from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
@@ -18,6 +18,7 @@ from libs.auth_lib.core.security import (
 )
 from libs.auth_lib.crud import get_user_by_username
 from libs.auth_lib.schemas import Message, UserPublic
+from libs.utils_lib.api.deps import async_session_dep
 
 router = APIRouter()
 

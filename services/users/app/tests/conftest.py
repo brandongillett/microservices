@@ -5,10 +5,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.core.config import settings
-from app.core.database import session_manager
 from app.main import app
 from libs.auth_lib.models import Users
+from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.database import session_manager
 
 
 @pytest.fixture(scope="session", autouse=True)

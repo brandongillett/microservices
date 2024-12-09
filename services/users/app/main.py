@@ -7,9 +7,9 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.main import api_router as v1_router
-from app.core.config import settings
-from app.core.database import session_manager
-from app.core.redis import redis_client
+from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 
 

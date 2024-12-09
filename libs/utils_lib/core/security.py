@@ -5,7 +5,7 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from app.core.config import settings
+from libs.utils_lib.core.config import settings
 
 
 # Security Settings

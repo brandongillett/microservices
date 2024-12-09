@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.config import api_settings
-from app.api.v1.deps import async_session_dep, credential_exception, get_user_from_token
 from app.core.security import (
     blacklist_access_token,
     gen_token,
@@ -25,6 +24,7 @@ from app.crud import (
     get_refresh_tokens,
 )
 from app.schemas import RefreshTokenCreate, Token, UserCreate
+from libs.auth_lib.api.deps import credential_exception, get_user_from_token
 from libs.auth_lib.core.security import (
     get_token_jti,
     is_password_complex,
@@ -32,6 +32,7 @@ from libs.auth_lib.core.security import (
 )
 from libs.auth_lib.crud import get_user_by_email, get_user_by_username
 from libs.auth_lib.schemas import UserPublic
+from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.security import rate_limiter
 
 router = APIRouter()

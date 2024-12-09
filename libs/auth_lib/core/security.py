@@ -1,10 +1,11 @@
+from uuid import UUID
+
+import jwt
 from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
-from uuid import UUID
-import jwt
 
-from app.core.config import settings
-from app.core.redis import redis_client
+from libs.auth_lib.core.redis import redis_tokens_client
+from libs.utils_lib.core.config import settings
 
 
 # Security Settings
@@ -32,7 +33,7 @@ async def is_access_token_blacklisted(jti: UUID) -> bool:
     Returns:
         bool: True if the token is blacklisted, False otherwise.
     """
-    client = await redis_client.get_client()
+    client = await redis_tokens_client.get_client()
     result = await client.get(f"{str(jti)}_blacklisted")
     return result is not None
 

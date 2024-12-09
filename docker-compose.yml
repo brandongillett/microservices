@@ -102,11 +102,12 @@ services:
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
-      - MYSQL_SERVER=db
+      - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
-      - MYSQL_USER=root
+      - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
       - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
+      - REDIS_TOKENS_URL=${REDIS_TOKENS_URL?Variable not set}
     platform: linux/amd64
     volumes:
       - ./libs:/app/libs
@@ -133,12 +134,13 @@ services:
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-      - SECRET_KEY=${SECRET_KEY?Variable not set?Variable not set}
-      - MYSQL_SERVER=db
+      - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
-      - MYSQL_USER=root
+      - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
       - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
+      - REDIS_TOKENS_URL=${REDIS_TOKENS_URL?Variable not set}
     platform: linux/amd64
     volumes:
       - ./libs:/app/libs
@@ -170,11 +172,12 @@ services:
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
-      - MYSQL_SERVER=db
+      - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
-      - MYSQL_USER=root
+      - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
       - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
       - REDIS_URL=redis://redis:6379
+      - REDIS_TOKENS_URL=${REDIS_TOKENS_URL?Variable not set}
     restart: always
     platform: linux/amd64
     depends_on:
@@ -233,12 +236,13 @@ services:
         - PROJECT_NAME=${PROJECT_NAME?Variable not set}
         - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
         - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
-        - SECRET_KEY=${SECRET_KEY?Variable not set?Variable not set}
-        - MYSQL_SERVER=db
+        - SECRET_KEY=${SECRET_KEY?Variable not set}
+        - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
         - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
-        - MYSQL_USER=root
+        - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
         - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
-        - REDIS_URL=redis://redis:6379
+        - REDIS_URL=${REDIS_URL?Variable not set}
+        - REDIS_TOKENS_URL=${REDIS_TOKENS_URL?Variable not set}
       restart: always
       platform: linux/amd64
       depends_on:

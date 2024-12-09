@@ -6,9 +6,10 @@ import jwt
 from fastapi import Request
 from pydantic_settings import BaseSettings
 
-from app.core.config import settings
-from app.core.redis import redis_client
+from libs.auth_lib.core.redis import redis_tokens_client
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
+from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.redis import redis_client
 
 
 # Security Settings
@@ -79,7 +80,7 @@ async def blacklist_access_token(jti: UUID, expiration_time: timedelta) -> None:
         jti (UUID): The JTI (unique identifier) of the access token
         expiration_time (timedelta): The time until the token expires
     """
-    client = await redis_client.get_client()
+    client = await redis_tokens_client.get_client()
     await client.set(
         f"{str(jti)}_blacklisted",
         "true",
