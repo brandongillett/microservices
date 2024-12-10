@@ -8,6 +8,7 @@ from libs.auth_lib.models import UserBase
 # Token schemas
 class TokenData(SQLModel):
     user_id: UUID
+    role: str
 
 
 # User schemas

@@ -100,7 +100,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT?Variable not set}
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+      - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
       - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
@@ -133,7 +133,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT?Variable not set}
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+      - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
       - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
@@ -170,7 +170,7 @@ services:
       - ENVIRONMENT=${ENVIRONMENT?Variable not set}
       - PROJECT_NAME=${PROJECT_NAME?Variable not set}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+      - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
       - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
@@ -235,7 +235,7 @@ services:
         - ENVIRONMENT=${ENVIRONMENT?Variable not set}
         - PROJECT_NAME=${PROJECT_NAME?Variable not set}
         - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
-        - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS?Variable not set}
+        - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
         - SECRET_KEY=${SECRET_KEY?Variable not set}
         - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
         - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}

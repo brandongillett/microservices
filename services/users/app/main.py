@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.main import api_router as v1_router
+from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.redis import redis_client
@@ -33,10 +34,12 @@ async def lifespan(app: FastAPI) -> Any:
     # Initialize database and Redis connections on startup
     await session_manager.init_db()
     await redis_client.connect()
+    await redis_tokens_client.connect()
     yield
     # Close database and Redis connections on shutdown
     await session_manager.close()
     await redis_client.close()
+    await redis_tokens_client.close()
 
 
 app = FastAPI(

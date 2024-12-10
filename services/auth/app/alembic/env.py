@@ -17,7 +17,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from app.models import SQLModel # noqa
-from app.core.config import settings # noqa
+from libs.utils_lib.core.config import settings # noqa
 
 # add your model's MetaData object here
 # for 'autogenerate' support

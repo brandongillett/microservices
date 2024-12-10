@@ -153,7 +153,7 @@ async def login(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token, access_jti = gen_token(
-        data={"sub": str(user.id)}, expire=access_token_expires
+        data={"sub": str(user.id), "role": user.role}, expire=access_token_expires
     )
 
     # Generate refresh token and store JTI in database
@@ -161,7 +161,7 @@ async def login(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     refresh_token, refresh_jti = gen_token(
-        data={"sub": str(user.id)}, expire=refresh_token_expires
+        data={"sub": str(user.id), "role": user.role}, expire=refresh_token_expires
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
@@ -313,7 +313,7 @@ async def refresh_access_token(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token, access_jti = gen_token(
-        data={"sub": str(user.id)}, expire=access_token_expires
+        data={"sub": str(user.id), "role": user.role}, expire=access_token_expires
     )
 
     # Create a new refresh token and store JTI in database
@@ -321,7 +321,7 @@ async def refresh_access_token(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     new_refresh_token, new_refresh_jti = gen_token(
-        data={"sub": str(user.id)}, expire=new_refresh_token_expires
+        data={"sub": str(user.id), "role": user.role}, expire=new_refresh_token_expires
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,

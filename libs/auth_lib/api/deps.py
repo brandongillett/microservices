@@ -26,12 +26,10 @@ credential_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
-
 token_dep = Annotated[str, Depends(oauth2)]
 
 
-# Dependency to validate the token (All services will use this to return the user_id while checking if the token is valid)
-async def validate_token(token: str) -> UUID:
+async def get_token_data(token: str) -> TokenData:
     """
     Validates an access token and optionally checks if it's blacklisted.
 
@@ -52,11 +50,12 @@ async def validate_token(token: str) -> UUID:
             algorithms=[auth_lib_security_settings.ALGORITHM],
         )
         user_id: UUID = payload.get("sub")
+        user_role: str = payload.get("role")
 
         if not user_id:
             raise credential_exception
 
-        token_data = TokenData(user_id=user_id)
+        token_data = TokenData(user_id=user_id, role=user_role)
 
         access_jti = get_token_jti(token)
 
@@ -66,7 +65,7 @@ async def validate_token(token: str) -> UUID:
                 detail="Sessions does not exist",
             )
 
-        return token_data.user_id
+        return token_data
 
     except (InvalidTokenError, ValidationError):
         raise credential_exception
@@ -83,14 +82,21 @@ async def get_user_from_token(session: async_session_dep, token: str) -> Users:
     Returns:
         Users: The user object.
     """
-    user_id = await validate_token(token)
+    token_data = await get_token_data(token)
+
+    user_id = token_data.user_id
 
     user = await get_user(session, user_id=user_id)
 
-    if not user or user.disabled:
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive or non-existent user",
+            detail="Could not retrieve user",
+        )
+    elif user.disabled:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user",
         )
 
     return user
@@ -111,7 +117,20 @@ async def get_current_user(session: async_session_dep, token: token_dep) -> User
     return await get_user_from_token(session, token)
 
 
+async def get_current_user_token_data(token: token_dep) -> TokenData:
+    """
+    Get the current user ID from the token.
+
+    Args:
+        token (str): The token to decode.
+
+    Returns:
+        UUID: The user ID.
+    """
+    return await get_token_data(token)
+
+
 current_user = Annotated[Users, Depends(get_current_user)]
 
-# Dependency to get the current user ID (All services will use this dependency to get the user ID)
-current_user_id = Annotated[UUID, Depends(validate_token)]
+# Dependency to get the token data (All services will use this dependency to get the user ID)
+current_user_token_data = Annotated[UUID, Depends(get_current_user_token_data)]
