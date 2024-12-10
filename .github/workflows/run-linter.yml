@@ -24,5 +24,5 @@ jobs:
         with:
           version: "0.4.15"
           enable-cache: true
-      - run: bash scripts/lint.sh
+      - run: uv run bash scripts/lint.sh
         working-directory: services/auth
