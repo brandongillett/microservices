@@ -47,9 +47,9 @@ To create a new version for a desired service while ensuring backward compatibil
   2. Create a new FastAPI app instance for version ```v2``` and mount it to the main app:
   ```
   app_v2 = FastAPI(version="v2", title=settings.PROJECT_NAME, docs_url=settings.DOCS_URL)
-  
+
   app_v2.include_router(v2_router)
-  
+
   app.mount("/v2", app_v2)
   ```
   3. Update the latest version router (e.g. ```app.include_router(v1_router)``` to ```app.include_router(v2_router)```)

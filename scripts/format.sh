@@ -9,22 +9,38 @@ CYAN='\033[0;36m'
 RED='\033[0;31m'
 NC='\033[0m' # No color (reset)
 
-#Libs
+# Format libs
 echo -e "${CYAN}Formatting libs...${NC}"
 uv run --with ruff==0.7.1 ruff check libs --config services/auth/pyproject.toml --fix
-uv run --with ruff==0.7.1  ruff format libs --config services/auth/pyproject.toml
+uv run --with ruff==0.7.1 ruff format libs --config services/auth/pyproject.toml
 
-#Auth service
-echo -e "${CYAN}Formatting auth service...${NC}"
-uv run --with ruff==0.7.1 ruff check services/auth/app services/auth/scripts --config services/auth/pyproject.toml --fix
-uv run --with ruff ruff format services/auth/app services/auth/scripts --config services/auth/pyproject.toml
+# Function to format a service
+format_service() {
+    local service_path="$1"
+    local service_name=$(basename "$service_path")
 
-#Users service
-echo -e "${CYAN}Formatting users service...${NC}"
-uv run --with ruff==0.7.1 ruff check services/users/app services/users/scripts --fix --config services/users/pyproject.toml
-uv run --with ruff==0.7.1  ruff format services/users/app services/users/scripts --config services/users/pyproject.toml
+    echo -e "${CYAN}Formatting $service_name service...${NC}"
 
-#Pre-commit
+    # Check if required folders exist
+    if [ -d "$service_path/app" ] && [ -d "$service_path/scripts" ]; then
+        uv run --with ruff==0.7.1 ruff check "$service_path/app" "$service_path/scripts" --config "$service_path/pyproject.toml" --fix
+        uv run --with ruff==0.7.1 ruff format "$service_path/app" "$service_path/scripts" --config "$service_path/pyproject.toml"
+    else
+        echo -e "${RED}Warning: Missing app or scripts folder in $service_name service. Skipping...${NC}"
+    fi
+}
+
+# Iterate through services
+for service_dir in services/*/; do
+    if [ -f "$service_dir/pyproject.toml" ]; then
+        format_service "$service_dir"
+    else
+        echo -e "${YELLOW}Skipping $service_dir: pyproject.toml not found${NC}"
+    fi
+
+done
+
+# Pre-commit
 echo -e "${YELLOW}Running pre-commit...${NC}"
 uv run --with pre-commit pre-commit run --all-files --verbose
 

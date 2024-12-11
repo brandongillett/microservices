@@ -96,4 +96,3 @@ This script:
 
 * Formats and lints all services and libs folders.
 * Runs pre-commit hooks across all files to verify compliance.
-

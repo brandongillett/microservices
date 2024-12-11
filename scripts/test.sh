@@ -2,7 +2,6 @@
 
 set -e
 
-
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -22,17 +21,25 @@ docker compose down -v --remove-orphans > /dev/null 2>&1
 echo -e "${GREEN}Starting Docker containers...${NC}"
 docker compose up -d > /dev/null 2>&1
 
-# Run tests for auth-service
-echo -e "${CYAN}Running tests for auth-service...${NC}"
-docker compose exec -t auth-service bash scripts/tests-start.sh "$@"
+# Function to run tests for services
+run_tests() {
+    local service_name="$1"
+    echo -e "${CYAN}Running tests for $service_name...${NC}"
+    docker compose exec -t "$service_name" bash scripts/tests-start.sh "$@"
+}
 
-# Run tests for users-service
-echo -e "${CYAN}Running tests for users-service...${NC}"
-docker compose exec -t users-service bash scripts/tests-start.sh "$@"
+# Identify and test all services
+for service_dir in services/*/; do
+    service_name=$(basename "$service_dir")-service
+    if [ -f "$service_dir/scripts/tests-start.sh" ]; then
+        run_tests "$service_name"
+    else
+        echo -e "${YELLOW}Skipping $service_name: tests-start.sh not found${NC}"
+    fi
+done
 
 # Tear down the containers after the tests
 echo -e "${RED}Tearing down containers...${NC}"
-docker compose exec -t users-service bash scripts/tests-start.sh "$@"
 docker compose down -v --remove-orphans > /dev/null 2>&1
 
 # Successful tests message
