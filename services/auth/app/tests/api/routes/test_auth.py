@@ -12,8 +12,12 @@ from app.core.security import (
 )
 from app.crud import create_user
 from app.schemas import UserCreate
-from app.tests.utils.utils import random_email, random_lower_string, test_password
 from libs.auth_lib.core.security import get_token_jti, is_access_token_blacklisted
+from libs.utils_lib.tests.utils.utils import (
+    random_email,
+    random_lower_string,
+    test_password,
+)
 
 
 @pytest.mark.anyio

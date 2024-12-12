@@ -17,7 +17,6 @@ def parse_cors(v: Any) -> list[str] | str:
 
 class settings(BaseSettings):
     DOMAIN: str = "localhost"
-    LOCAL_BASE_URL: str = "http://localhost:8000"
     PROJECT_NAME: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     FRONTEND_HOST: str = "http://localhost:5173"
@@ -34,9 +33,7 @@ class settings(BaseSettings):
     REDIS_URL: str
     REDIS_TOKENS_URL: str
 
-    BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
+    CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -44,7 +41,7 @@ class settings(BaseSettings):
         if self.ENVIRONMENT == "local" or self.ENVIRONMENT == "staging":
             return ["*"]
         else:
-            return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
+            return [str(origin).rstrip("/") for origin in self.CORS_ORIGINS] + [
                 self.FRONTEND_HOST
             ]
 

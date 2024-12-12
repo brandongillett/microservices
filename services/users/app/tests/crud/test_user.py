@@ -8,8 +8,12 @@ from app.crud import (
     update_user_password,
     update_user_username,
 )
-from app.tests.utils.utils import random_email, random_lower_string, test_password
 from libs.auth_lib.models import Users
+from libs.utils_lib.tests.utils.utils import (
+    random_email,
+    random_lower_string,
+    test_password,
+)
 
 
 @pytest.mark.anyio

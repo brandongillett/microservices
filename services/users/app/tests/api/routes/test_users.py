@@ -2,11 +2,10 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.tests.utils.utils import (
-    create_and_login_user,
-    random_lower_string,
-    test_password,
+from libs.utils_lib.tests.utils.utils import (
+    create_and_login_user_auth_client as create_and_login_user,
 )
+from libs.utils_lib.tests.utils.utils import random_lower_string, test_password
 
 
 # User Details

@@ -1,14 +1,14 @@
 from collections.abc import AsyncGenerator
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.main import app
 from libs.auth_lib.models import Users
-from libs.utils_lib.core.config import settings
 from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.tests.conftest import anyio_backend, auth_client, client
+
+__all__ = ["anyio_backend", "client", "auth_client"]
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -22,29 +22,3 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
         statement = delete(Users)
         await session.execute(statement)
         await session.commit()
-
-
-@pytest.fixture(scope="session")
-def anyio_backend() -> str:
-    return "asyncio"
-
-
-@pytest.fixture(scope="session")
-async def client() -> AsyncGenerator[AsyncClient, None]:
-    async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url=settings.LOCAL_BASE_URL,
-    ) as ac:
-        yield ac
-
-
-@pytest.fixture(scope="session")
-async def auth_client() -> AsyncGenerator[AsyncClient, None]:
-    auth_url = "http://auth-service:8000"
-    if settings.ENVIRONMENT != "local":
-        auth_url = f"http://auth.{settings.DOMAIN}"
-
-    async with AsyncClient(
-        base_url=auth_url,
-    ) as ac:
-        yield ac

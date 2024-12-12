@@ -7,9 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.crud import create_refresh_token
 from app.schemas import RefreshTokenCreate
-from app.tests.utils.utils import (
-    create_and_login_user,
-)
+from libs.utils_lib.tests.utils.utils import create_and_login_user
 
 
 # User Sessions
