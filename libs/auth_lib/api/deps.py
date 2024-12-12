@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 import jwt
@@ -134,3 +134,17 @@ current_user = Annotated[Users, Depends(get_current_user)]
 
 # Dependency to get the token data (All services will use this dependency to get the user ID)
 current_user_token_data = Annotated[UUID, Depends(get_current_user_token_data)]
+
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]) -> None:
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, token_data: current_user_token_data) -> Any:
+        if token_data.role in self.allowed_roles:
+            return True
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )

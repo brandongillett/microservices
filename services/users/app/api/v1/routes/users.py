@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.crud import (
     update_user_password,
@@ -10,7 +10,8 @@ from app.schemas import (
     UpdatePassword,
     UpdateUsername,
 )
-from libs.auth_lib.api.deps import current_user
+from libs.auth_lib.api.config import api_settings as auth_lib_api_settings
+from libs.auth_lib.api.deps import RoleChecker, current_user
 from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
@@ -22,8 +23,10 @@ from libs.utils_lib.api.deps import async_session_dep
 
 router = APIRouter()
 
+all_roles = RoleChecker(allowed_roles=auth_lib_api_settings.roles)
 
-@router.get("/me", response_model=UserPublic)
+
+@router.get("/me", response_model=UserPublic, dependencies=[Depends(all_roles)])
 def my_details(current_user: current_user) -> Any:
     """
     Get the current user details.
@@ -34,7 +37,11 @@ def my_details(current_user: current_user) -> Any:
     return current_user
 
 
-@router.patch("/me/username", response_model=Message)
+@router.patch(
+    "/me/username",
+    response_model=Message,
+    dependencies=[Depends(all_roles)],
+)
 async def update_user_name(
     session: async_session_dep, body: UpdateUsername, current_user: current_user
 ) -> Message:
@@ -80,7 +87,11 @@ async def update_user_name(
     return Message(message=f"Username updated to {body.new_username}")
 
 
-@router.patch("/me/password", response_model=Message)
+@router.patch(
+    "/me/password",
+    response_model=Message,
+    dependencies=[Depends(all_roles)],
+)
 async def update_password(
     session: async_session_dep, body: UpdatePassword, current_user: current_user
 ) -> Message:

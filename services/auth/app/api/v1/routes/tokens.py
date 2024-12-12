@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.config import api_settings
 from app.core.security import (
@@ -14,14 +14,21 @@ from app.crud import (
 from app.schemas import (
     RefreshTokensPublic,
 )
-from libs.auth_lib.api.deps import current_user
+from libs.auth_lib.api.config import api_settings as auth_lib_api_settings
+from libs.auth_lib.api.deps import RoleChecker, current_user
 from libs.auth_lib.schemas import Message
 from libs.utils_lib.api.deps import async_session_dep
 
 router = APIRouter()
 
+all_roles = RoleChecker(allowed_roles=auth_lib_api_settings.roles)
 
-@router.get("", response_model=RefreshTokensPublic)
+
+@router.get(
+    "",
+    response_model=RefreshTokensPublic,
+    dependencies=[Depends(all_roles)],
+)
 async def get_refresh_tokens(current_user: current_user) -> RefreshTokensPublic:
     """
     Get the current user refresh tokens.
@@ -34,9 +41,15 @@ async def get_refresh_tokens(current_user: current_user) -> RefreshTokensPublic:
     return RefreshTokensPublic(refresh_tokens=tokens, count=len(tokens))
 
 
-@router.delete("/{token_id}", response_model=Message)
+@router.delete(
+    "/{token_id}",
+    response_model=Message,
+    dependencies=[Depends(all_roles)],
+)
 async def revoke_refresh_token(
-    session: async_session_dep, current_user: current_user, token_id: UUID
+    session: async_session_dep,
+    current_user: current_user,
+    token_id: UUID,
 ) -> Message:
     """
     Revoke a user refresh token.

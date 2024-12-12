@@ -9,7 +9,7 @@ You can execute all tests using the following bash script, which will completely
 bash scripts/test.sh
 ```
 
-If your containers are already running and you want to execute the tests without stopping the current processes, you can run tests for each service (e.g. auth-service):
+If your containers are already running and you want to execute the tests without stopping the current processes, you can run tests for each service (e.g. auth):
 ```
 docker compose exec -t auth-service bash scripts/tests-start.sh
 ```
@@ -80,9 +80,19 @@ alembic upgrade head
 ## Linter
 In addition to the pre-commit hook, you can manually run lint checks using the script located in the ```./services/{SERVICE}/lint.sh``` file of each service. This script is designed to check for code errors and enforce coding standards across your services code.
 
-To execute the linting checks, run the following command in the desired services container (e.g. auth)
+You can execute all linters using the following bash script, which will completely wipe volumes and rebuild the containers:
+```
+bash scripts/lint.sh
+```
+
+If your containers are already running and you want to execute the linter without stopping the current processes, run the following command in the desired services container (e.g. auth)
 ```
 docker compose exec -t auth-service bash scripts/lint.sh
 ```
 
 Keep in mind these checks will also be done when pushing to the main branch.
+
+
+## More to come
+* Services folder creation (has to match docker containers ({SERVICE}-service naming scheme), contain lint.sh and tests-start.sh in scripts folder, etc.)
+* Current user dependency for services (different from auth and users, separate dependency for TokenData (userid,role))
