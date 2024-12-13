@@ -79,6 +79,7 @@ async def test_update_role_invalid_role(
 
     assert response.status_code == 400
 
+
 @pytest.mark.anyio
 async def test_update_role_invalid_user(
     client: AsyncClient, auth_client: AsyncClient

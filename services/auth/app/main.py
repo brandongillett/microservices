@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI) -> Any:
     await session_manager.init_db()
     await redis_client.connect()
     await redis_tokens_client.connect()
-    # Create root user if not existss
+    # Create root user
     if (
         utils_lib_settings.ROOT_USER_PASSWORD
         and utils_lib_settings.ROOT_USER_PASSWORD != "none"
