@@ -1,17 +1,12 @@
-from contextlib import asynccontextmanager
-from typing import Any
-
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.main import api_router as v1_router
-from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings
-from libs.utils_lib.core.database import session_manager
-from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
+from libs.utils_lib.main import lifespan
 
 
 class app_settings(BaseSettings):
@@ -26,20 +21,6 @@ class app_settings(BaseSettings):
 
 
 app_settings = app_settings()  # type: ignore
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
-    _ = app  # Unused variable
-    # Initialize database and Redis connections on startup
-    await session_manager.init_db()
-    await redis_client.connect()
-    await redis_tokens_client.connect()
-    yield
-    # Close database and Redis connections on shutdown
-    await session_manager.close()
-    await redis_client.close()
-    await redis_tokens_client.close()
 
 
 app = FastAPI(

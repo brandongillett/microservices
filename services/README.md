@@ -96,3 +96,4 @@ Keep in mind these checks will also be done when pushing to the main branch.
 ## More to come
 * Services folder creation (has to match docker containers ({SERVICE}-service naming scheme), contain lint.sh and tests-start.sh in scripts folder, etc.)
 * Current user dependency for services (different from auth and users, separate dependency for TokenData (userid,role))
+* Discuss a little about roles and how to uniformly make them across all services

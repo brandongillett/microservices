@@ -63,3 +63,29 @@ async def update_user_password(
     await session.commit()
     await session.refresh(user)
     return user
+
+
+async def update_user_role(session: AsyncSession, user_id: UUID, role: str) -> Users:
+    """
+    Update the user role.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (UUID): The user ID.
+        new_role (str): The new role.
+
+    Returns:
+        Users: The updated user.
+    """
+    user = await get_user(session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    user.role = role
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user

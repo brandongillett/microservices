@@ -135,6 +135,7 @@ services:
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - ROOT_USER_PASSWORD=${ROOT_USER_PASSWORD?Variable not set}
       - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
@@ -172,6 +173,7 @@ services:
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - CORS_ORIGINS=${CORS_ORIGINS?Variable not set}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
+      - ROOT_USER_PASSWORD=${ROOT_USER_PASSWORD?Variable not set}
       - MYSQL_SERVER=${MYSQL_SERVER?Variable not set}
       - MYSQL_DATABASE=${USERS_AUTH_DB?Variable not set}
       - MYSQL_USER=${MYSQL_CURRENT_USER?Variable not set}
