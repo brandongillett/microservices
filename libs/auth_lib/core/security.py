@@ -10,10 +10,13 @@ from libs.utils_lib.core.config import settings
 
 # Security Settings
 class security_settings(BaseSettings):
+    # Roles
+    roles: list[str] = ["user", "admin", "root"]
+
     # Hashing algorithm (for tokens)
     ALGORITHM: str = "HS256"
     # Username and password constraints
-    USERNAME_MIN_LENGTH: int = 5
+    USERNAME_MIN_LENGTH: int = 3
     USERNAME_MAX_LENGTH: int = 22
     PASSWORD_MIN_LENGTH: int = 8
     PASSWORD_MAX_LENGTH: int = 40

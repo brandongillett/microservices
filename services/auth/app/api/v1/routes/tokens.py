@@ -14,14 +14,14 @@ from app.crud import (
 from app.schemas import (
     RefreshTokensPublic,
 )
-from libs.auth_lib.api.config import api_settings as auth_lib_api_settings
 from libs.auth_lib.api.deps import RoleChecker, current_user
-from libs.auth_lib.schemas import Message
+from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.schemas import Message
 
 router = APIRouter()
 
-all_roles = RoleChecker(allowed_roles=auth_lib_api_settings.roles)
+all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
 
 
 @router.get(

@@ -14,8 +14,3 @@ class TokenData(SQLModel):
 # User schemas
 class UserPublic(UserBase):
     id: UUID
-
-
-# Message model
-class Message(SQLModel):
-    message: str

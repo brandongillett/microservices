@@ -10,20 +10,21 @@ from app.schemas import (
     UpdatePassword,
     UpdateUsername,
 )
-from libs.auth_lib.api.config import api_settings as auth_lib_api_settings
 from libs.auth_lib.api.deps import RoleChecker, current_user
 from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
     verify_password,
 )
+from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.auth_lib.crud import get_user_by_username
-from libs.auth_lib.schemas import Message, UserPublic
+from libs.auth_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.schemas import Message
 
 router = APIRouter()
 
-all_roles = RoleChecker(allowed_roles=auth_lib_api_settings.roles)
+all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
 
 
 @router.get("/me", response_model=UserPublic, dependencies=[Depends(all_roles)])
@@ -42,7 +43,7 @@ def my_details(current_user: current_user) -> Any:
     response_model=Message,
     dependencies=[Depends(all_roles)],
 )
-async def update_user_name(
+async def update_username(
     session: async_session_dep, body: UpdateUsername, current_user: current_user
 ) -> Message:
     """

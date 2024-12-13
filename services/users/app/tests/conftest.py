@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator
 
 import pytest
-from sqlmodel import delete
+from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.models import Users
@@ -19,6 +19,6 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
     async with session_manager.session_maker() as session:
         yield session
 
-        statement = delete(Users)
+        statement = delete(Users).where(not_(Users.username == "root"))
         await session.execute(statement)
         await session.commit()

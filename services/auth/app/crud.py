@@ -12,6 +12,37 @@ from libs.auth_lib.models import RefreshTokens, Users
 
 
 # CRUD operations for Users
+async def create_root_user(session: AsyncSession, password: str) -> Users:
+    """
+    Create the root user.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        Users: The created root user.
+    """
+
+    user = await get_user_by_username(session, "root")
+
+    if user:
+        return user
+
+    user_create = UserCreate(
+        username="root", email="root@example.com", password=password
+    )
+
+    dbObj = Users.model_validate(
+        user_create,
+        update={"password": get_password_hash(user_create.password), "role": "root"},
+    )
+    session.add(dbObj)
+    await session.commit()
+    await session.refresh(dbObj)
+
+    return dbObj
+
+
 async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
     """
     Create a new user.
