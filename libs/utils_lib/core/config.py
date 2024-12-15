@@ -1,18 +1,10 @@
 import secrets
 import warnings
-from typing import Annotated, Any, Literal
+from typing import Literal
 
-from pydantic import AnyUrl, BeforeValidator, computed_field, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from typing_extensions import Self
-
-
-def parse_cors(v: Any) -> list[str] | str:
-    if isinstance(v, str) and not v.startswith("["):
-        return [i.strip() for i in v.split(",")]
-    elif isinstance(v, list | str):
-        return v
-    raise ValueError(v)
 
 
 class settings(BaseSettings):
@@ -34,17 +26,13 @@ class settings(BaseSettings):
     REDIS_URL: str
     REDIS_TOKENS_URL: str
 
-    CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = []
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def all_cors_origins(self) -> list[str]:
-        if self.ENVIRONMENT == "local" or self.ENVIRONMENT == "staging":
+    def get_cors_origins(self) -> list[str]:
+        if self.ENVIRONMENT == "local":
             return ["*"]
         else:
-            return [str(origin).rstrip("/") for origin in self.CORS_ORIGINS] + [
-                self.FRONTEND_HOST
-            ]
+            return [self.FRONTEND_HOST]
+
+    CORS_ORIGINS = property(get_cors_origins)
 
     def get_database_url(self) -> str:
         """

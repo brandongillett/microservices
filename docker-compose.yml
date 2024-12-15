@@ -2,13 +2,10 @@ x-environment-vars: &environment-vars
   DOMAIN: ${DOMAIN?Variable not set}
   ENVIRONMENT: ${ENVIRONMENT?Variable not set}
   PROJECT_NAME: ${PROJECT_NAME?Variable not set}
-  SERVICES: ${SERVICES?Variable not set}
   FRONTEND_HOST: ${FRONTEND_HOST?Variable not set}
-  CORS_ORIGINS: ${CORS_ORIGINS?Variable not set}
   SECRET_KEY: ${SECRET_KEY?Variable not set}
   ROOT_USER_PASSWORD: ${ROOT_USER_PASSWORD?Variable not set}
   MYSQL_SERVER: ${MYSQL_SERVER?Variable not set}
-  MYSQL_DATABASE: ${MYSQL_DATABASE?Variable not set}
   MYSQL_USER: ${MYSQL_CURRENT_USER?Variable not set}
   MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD?Variable not set}
   REDIS_URL: ${REDIS_URL?Variable not set}
@@ -17,8 +14,6 @@ x-build: &build
   platform: linux/amd64
   env_file:
     - .env
-  environment: 
-    <<: *environment-vars
   volumes:
     - ./libs:/app/libs
   healthcheck:
@@ -59,8 +54,6 @@ services:
 
   db:
     image: mysql:8.0
-    env_file:
-      - .env
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
     volumes:
@@ -117,6 +110,9 @@ services:
         condition: service_healthy
         restart: true
     command: bash /app/scripts/prestart.sh
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
     <<: *build
 
   prestart-users:
@@ -133,6 +129,9 @@ services:
         condition: service_healthy
         restart: true
     command: bash /app/scripts/prestart.sh
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
     <<: *build
 
   auth-service:
@@ -143,6 +142,7 @@ services:
       - run
       - --reload
       - "app/main.py"
+      - "--no-proxy-headers"
     develop:
       watch:
         - path: ./services/auth
@@ -152,6 +152,9 @@ services:
             - app/alembic
             - htmlcov
             - libs
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
     <<: *build
     restart: always
     depends_on:
@@ -182,6 +185,7 @@ services:
       - run
       - --reload
       - "app/main.py"
+      - "--no-proxy-headers"
     develop:
       watch:
         - path: ./services/users
@@ -190,6 +194,9 @@ services:
           ignore:
             - htmlcov
             - libs
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
     <<: *build
     restart: always
     depends_on:
