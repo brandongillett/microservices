@@ -6,6 +6,6 @@ if [ "$ENVIRONMENT" = "production" ]; then
     exit 1
 fi
 
-python app/backend_pre_start.py > /dev/null 2>&1
+python src/backend_pre_start.py > /dev/null 2>&1
 
 bash scripts/test.sh "$@"

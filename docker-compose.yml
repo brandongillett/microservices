@@ -141,7 +141,7 @@ services:
       - fastapi
       - run
       - --reload
-      - "app/main.py"
+      - "src/main.py"
       - "--no-proxy-headers"
     develop:
       watch:
@@ -149,7 +149,7 @@ services:
           action: sync
           target: /app
           ignore:
-            - app/alembic
+            - src/alembic
             - htmlcov
             - libs
     environment:
@@ -184,7 +184,7 @@ services:
       - fastapi
       - run
       - --reload
-      - "app/main.py"
+      - "src/main.py"
       - "--no-proxy-headers"
     develop:
       watch:

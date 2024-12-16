@@ -22,11 +22,11 @@ format_service() {
     echo -e "${CYAN}Formatting $service_name service...${NC}"
 
     # Check if required folders exist
-    if [ -d "$service_path/app" ] && [ -d "$service_path/scripts" ]; then
-        uv run --with ruff==0.7.1 ruff check "$service_path/app" "$service_path/scripts" --config "$service_path/pyproject.toml" --fix
-        uv run --with ruff==0.7.1 ruff format "$service_path/app" "$service_path/scripts" --config "$service_path/pyproject.toml"
+    if [ -d "$service_path/src" ] && [ -d "$service_path/scripts" ]; then
+        uv run --with ruff==0.7.1 ruff check "$service_path/src" "$service_path/scripts" --config "$service_path/pyproject.toml" --fix
+        uv run --with ruff==0.7.1 ruff format "$service_path/src" "$service_path/scripts" --config "$service_path/pyproject.toml"
     else
-        echo -e "${RED}Warning: Missing app or scripts folder in $service_name service. Skipping...${NC}"
+        echo -e "${RED}Warning: Missing src or scripts folder in $service_name service. Skipping...${NC}"
     fi
 }
 

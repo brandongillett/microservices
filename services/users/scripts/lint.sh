@@ -2,6 +2,6 @@
 set -e
 set -x
 
-mypy app
-ruff check libs app
-ruff format libs app --check
+mypy src
+ruff check libs src
+ruff format libs src --check

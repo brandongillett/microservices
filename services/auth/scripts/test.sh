@@ -2,6 +2,6 @@
 set -e
 set -x
 
-coverage run --source=app -m pytest -q
+coverage run --source=src -m pytest -q
 #coverage report --show-missing
 coverage html --title "${@-coverage}"

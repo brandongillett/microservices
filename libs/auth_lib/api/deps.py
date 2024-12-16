@@ -6,7 +6,6 @@ from fastapi import Depends, HTTPException, status
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
-from app.api.deps import oauth2
 from libs.auth_lib.core.security import (
     get_token_jti,
     is_access_token_blacklisted,
@@ -19,6 +18,7 @@ from libs.auth_lib.models import Users
 from libs.auth_lib.schemas import TokenData
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.config import settings
+from src.api.deps import oauth2
 
 credential_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,

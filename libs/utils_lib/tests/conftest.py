@@ -3,8 +3,8 @@ from collections.abc import AsyncGenerator
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.main import app
 from libs.utils_lib.core.config import settings
+from src.main import app
 
 
 @pytest.fixture(scope="session")
