@@ -79,6 +79,30 @@ services:
       start_period: 30s
       timeout: 10s
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER?Variable not set}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD?Variable not set}
+    networks:
+      - traefik-public
+      - default
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.${STACK_NAME?Variable not set}-rabbitmq-http.rule=Host(`rabbitmq.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-rabbitmq-http.entrypoints=http
+      - traefik.http.services.${STACK_NAME?Variable not set}-rabbitmq.loadbalancer.server.port=15672
+
   adminer:
     image: adminer
     networks:
@@ -221,6 +245,7 @@ services:
 
 volumes:
   db-data:
+  rabbitmq-data:
 
 networks:
   traefik-public:
