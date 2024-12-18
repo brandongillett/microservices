@@ -9,13 +9,13 @@ from starlette.middleware.cors import CORSMiddleware
 from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
+from src import events
 from src.api.v1.main import api_router as v1_router
 from src.crud import create_root_user
-from libs.utils_lib.core.rabbitmq import rabbit_broker
 
-from libs.users_lib.models import Users
 
 class app_settings(BaseSettings):
     TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [Auth]"
@@ -33,6 +33,7 @@ class app_settings(BaseSettings):
 
 app_settings = app_settings()  # type: ignore
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     _ = app  # Unused variable
@@ -40,7 +41,7 @@ async def lifespan(app: FastAPI) -> Any:
     await session_manager.init_db()
     await redis_client.connect()
     await redis_tokens_client.connect()
-    await rabbit_broker.start()#
+    await rabbitmq.start()
     # Create root user
     if (
         utils_lib_settings.ROOT_USER_PASSWORD
@@ -49,14 +50,17 @@ async def lifespan(app: FastAPI) -> Any:
         if not session_manager.session_maker:
             raise Exception("Session manager not initialized")
         async with session_manager.session_maker() as session:
-            root_user = await create_root_user(session, utils_lib_settings.ROOT_USER_PASSWORD)
-            await rabbit_broker.publish(root_user, queue="create_user")
+            root_user = await create_root_user(
+                session, utils_lib_settings.ROOT_USER_PASSWORD
+            )
+            await rabbitmq.broker.publish(root_user, queue="create_user")
+    await rabbitmq.broker.publish("TEST", queue="test_event")
     yield
     # Close database and Redis connections on shutdown
     await session_manager.close()
     await redis_client.close()
     await redis_tokens_client.close()
-    await rabbit_broker.close()
+    await rabbitmq.close()
 
 
 app = FastAPI(
@@ -66,6 +70,10 @@ app = FastAPI(
     docs_url=utils_lib_settings.DOCS_URL,
     lifespan=lifespan,
 )
+
+# Include rabbitmq router
+rabbitmq.router.include_router(events.rabbit_router)
+app.include_router(rabbitmq.router)
 
 # Set all CORS enabled origins
 app.add_middleware(

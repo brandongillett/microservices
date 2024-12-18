@@ -10,7 +10,6 @@ from libs.users_lib.models import Users
 from src.api.config import api_settings
 from src.models import RefreshTokens
 from src.schemas import RefreshTokenCreate, UserCreate
-from libs.utils_lib.core.rabbitmq import rabbit_broker
 
 
 # CRUD operations for Users
@@ -62,8 +61,6 @@ async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
     session.add(dbObj)
     await session.commit()
     await session.refresh(dbObj)
-
-    await rabbit_broker.publish(dbObj, queue="create_user")
 
     return dbObj
 

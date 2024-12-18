@@ -4,6 +4,7 @@ from sqlmodel import select
 from tenacity import after_log, before_log, retry, stop_after_attempt, wait_fixed
 
 from libs.utils_lib.core.database import DatabaseSessionManager
+from libs.utils_lib.core.rabbitmq import RabbitMQ
 from libs.utils_lib.core.redis import RedisClient
 
 logging.basicConfig(level=logging.INFO)
@@ -57,6 +58,28 @@ async def test_redis_connection(redis_client: RedisClient) -> None:
             raise Exception("Could not reach redis.")
 
         await redis_client.close()
+    except Exception as e:
+        logger.error(e)
+        raise e
+
+
+@retry(
+    stop=stop_after_attempt(max_tries),
+    wait=wait_fixed(wait_seconds),
+    before=before_log(logger, logging.INFO),
+    after=after_log(logger, logging.WARN),
+)
+async def test_rabbitmq_connection(rabbitmq_client: RabbitMQ) -> None:
+    """
+    Tests the RabbitMQ connection by declaring a queue.
+
+    Args:
+        rabbitmq_client (rabbitmq): The RabbitMQ client instance.
+    """
+    try:
+        await rabbitmq_client.start()
+
+        await rabbitmq_client.close()
     except Exception as e:
         logger.error(e)
         raise e

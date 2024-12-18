@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -120,6 +122,8 @@ async def test_update_password(
         headers=headers,
         json=update_data,
     )
+    # Wait for update event to be sent to auth service
+    time.sleep(0.1)
 
     login_response = await auth_client.post(
         "/auth/login",

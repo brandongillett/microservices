@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
-from faststream.rabbit.fastapi import RabbitRouter
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
@@ -10,10 +9,11 @@ from starlette.middleware.cors import CORSMiddleware
 from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
+from src import events
 from src.api.v1.main import api_router as v1_router
-from src.broker import main as broker
 
 
 class app_settings(BaseSettings):
@@ -29,6 +29,7 @@ class app_settings(BaseSettings):
 
 app_settings = app_settings()  # type: ignore
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     _ = app  # Unused variable
@@ -36,11 +37,13 @@ async def lifespan(app: FastAPI) -> Any:
     await session_manager.init_db()
     await redis_client.connect()
     await redis_tokens_client.connect()
+    await rabbitmq.start()
     yield
     # Close database and Redis connections on shutdown
     await session_manager.close()
     await redis_client.close()
     await redis_tokens_client.close()
+    await rabbitmq.close()
 
 
 app = FastAPI(
@@ -52,9 +55,8 @@ app = FastAPI(
 )
 
 # Include rabbitmq router
-rabbit_router = RabbitRouter(utils_lib_settings.RABBITMQ_URL)
-rabbit_router.include_router(broker.rabbit_router)
-app.include_router(rabbit_router)
+rabbitmq.router.include_router(events.rabbit_router)
+app.include_router(rabbitmq.router)
 
 # Set all CORS enabled origins
 app.add_middleware(

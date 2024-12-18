@@ -13,6 +13,7 @@ from libs.auth_lib.core.security import (
 from libs.users_lib.crud import get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings
 from src.core.security import (
@@ -82,8 +83,13 @@ async def register(
     user.username = user.username.lower()
     user.email = user.email.lower()
 
+    new_user = await create_user(session, user_create=user)
+
+    # Publish the user to the broker
+    await rabbitmq.broker.publish(new_user, queue="create_user")
+
     # Create the user
-    return await create_user(session, user_create=user)
+    return new_user
 
 
 @router.post("/login", response_model=Token)
