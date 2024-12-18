@@ -2,7 +2,7 @@ import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.core.security import verify_password
-from libs.auth_lib.crud import get_user, get_user_by_email, get_user_by_username
+from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.utils_lib.tests.utils.utils import (
     random_email,
     random_lower_string,

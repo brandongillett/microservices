@@ -13,9 +13,9 @@ from libs.auth_lib.core.security import (
 from libs.auth_lib.core.security import (
     security_settings as auth_lib_security_settings,
 )
-from libs.auth_lib.crud import get_user
-from libs.auth_lib.models import Users
 from libs.auth_lib.schemas import TokenData
+from libs.users_lib.crud import get_user
+from libs.users_lib.models import Users
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.config import settings
 from src.api.deps import oauth2

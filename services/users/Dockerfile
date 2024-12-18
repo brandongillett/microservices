@@ -21,7 +21,7 @@ ENV PYTHONPATH=/app
 
 COPY ./scripts /app/scripts
 
-COPY ./pyproject.toml ./uv.lock /app/
+COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 COPY ./src /app/src
 

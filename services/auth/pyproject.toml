@@ -30,7 +30,7 @@ dependencies = [
     "aioredis>=2.0.1",
     "pytest>=7.4.4",
     "aiomysql>=0.2.0",
-    "aio-pika>=9.5.3",
+    "faststream[rabbit]>=0.5.33",
 ]
 
 [tool.uv]

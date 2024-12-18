@@ -1,2 +1,3 @@
 -- Create databases for microservices
-create database UsersAuth;
+create database Auth;
+create database Users;

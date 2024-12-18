@@ -1,5 +1,24 @@
-# Importing the SQLModel class from sqlmodel to create the tables in the database
-# Import database models so alembic can create the tables
-from sqlmodel import SQLModel
+from datetime import datetime
+from uuid import UUID, uuid4
 
-_ = SQLModel
+from sqlmodel import Field, SQLModel
+
+from libs.users_lib.models import Users
+
+__all__ = ["Users"]
+
+
+# Base models
+class RefreshTokenBase(SQLModel):
+    created: datetime
+    expires: datetime
+    last_used: datetime
+    ip_address: str
+
+
+# Database models
+class RefreshTokens(RefreshTokenBase, table=True):
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", nullable=False, ondelete="CASCADE")
+    refresh_jti: UUID = Field(index=True, unique=True)
+    access_jti: UUID

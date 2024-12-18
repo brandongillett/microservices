@@ -5,10 +5,12 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.core.security import get_password_hash, verify_password
-from libs.auth_lib.crud import get_user_by_email, get_user_by_username
-from libs.auth_lib.models import RefreshTokens, Users
+from libs.users_lib.crud import get_user_by_email, get_user_by_username
+from libs.users_lib.models import Users
 from src.api.config import api_settings
+from src.models import RefreshTokens
 from src.schemas import RefreshTokenCreate, UserCreate
+from libs.utils_lib.core.rabbitmq import rabbit_broker
 
 
 # CRUD operations for Users
@@ -60,6 +62,8 @@ async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
     session.add(dbObj)
     await session.commit()
     await session.refresh(dbObj)
+
+    await rabbit_broker.publish(dbObj, queue="create_user")
 
     return dbObj
 

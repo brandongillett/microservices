@@ -4,11 +4,32 @@ from fastapi import HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.core.security import get_password_hash
-from libs.auth_lib.crud import get_user
-from libs.auth_lib.models import Users
+from libs.users_lib.crud import get_user
+from libs.users_lib.models import Users
+
 
 
 # CRUD operations for Users
+async def create_user(session: AsyncSession, user: Users) -> Users:
+    """
+    Create a new user.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_create (UserCreate): The user create request body.
+
+    Returns:
+        Users: The created user.
+    """
+    dbObj = Users.model_validate(
+        user
+    )
+    session.add(dbObj)
+    await session.commit()
+    await session.refresh(dbObj)
+    return dbObj
+
+
 async def update_user_username(
     session: AsyncSession, user_id: UUID, new_username: str
 ) -> Users:

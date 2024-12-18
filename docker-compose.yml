@@ -10,12 +10,15 @@ x-environment-vars: &environment-vars
   MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD?Variable not set}
   REDIS_URL: ${REDIS_URL?Variable not set}
   REDIS_TOKENS_URL: ${REDIS_TOKENS_URL?Variable not set}
+  RABBITMQ_SERVER: ${RABBITMQ_SERVER?Variable not set}
+  RABBITMQ_PORT: ${RABBITMQ_PORT?Variable not set}
+  RABBITMQ_USER: ${RABBITMQ_USER?Variable not set}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD?Variable not set}
+
 x-build: &build
   platform: linux/amd64
   env_file:
     - .env
-  volumes:
-    - ./libs:/app/libs
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:8000/utils/health"]
     interval: 10s
@@ -52,12 +55,12 @@ services:
       - traefik-public
       - default
 
-  db:
+  mysql:
     image: mysql:8.0
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
     volumes:
-      - db-data:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
       - ./mysql:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
@@ -109,7 +112,7 @@ services:
       - traefik-public
       - default
     depends_on:
-      - db
+      - mysql
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
     labels:
@@ -127,16 +130,21 @@ services:
       - traefik-public
       - default
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
         restart: true
       redis:
         condition: service_healthy
         restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
     command: bash /app/scripts/prestart.sh
+    volumes:
+      - ./libs:/app/libs
     environment:
       <<: *environment-vars
-      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
+      MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
     <<: *build
 
   prestart-users:
@@ -146,16 +154,21 @@ services:
       - traefik-public
       - default
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
         restart: true
       redis:
         condition: service_healthy
         restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
     command: bash /app/scripts/prestart.sh
+    volumes:
+      - ./libs:/app/libs
     environment:
       <<: *environment-vars
-      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
+      MYSQL_DATABASE: ${USERS_DATABASE?Variable not set}
     <<: *build
 
   auth-service:
@@ -176,16 +189,22 @@ services:
             - src/alembic
             - htmlcov
             - libs
+    volumes:
+      - ./libs:/app/libs
+      - ./services/auth/src/alembic:/app/src/alembic
     environment:
       <<: *environment-vars
-      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
+      MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
     <<: *build
     restart: always
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
         restart: true
       redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
         condition: service_healthy
         restart: true
       prestart-auth:
@@ -216,18 +235,25 @@ services:
           action: sync
           target: /app
           ignore:
+            - src/alembic
             - htmlcov
             - libs
+    volumes:
+      - ./libs:/app/libs
+      - ./services/users/src/alembic:/app/src/alembic
     environment:
       <<: *environment-vars
-      MYSQL_DATABASE: ${USERS_AUTH_DATABASE?Variable not set}
+      MYSQL_DATABASE: ${USERS_DATABASE?Variable not set}
     <<: *build
     restart: always
     depends_on:
-      db:
+      mysql:
         condition: service_healthy
         restart: true
       redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
         condition: service_healthy
         restart: true
       prestart-users:
@@ -244,7 +270,7 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.entrypoints=http
 
 volumes:
-  db-data:
+  mysql-data:
   rabbitmq-data:
 
 networks:

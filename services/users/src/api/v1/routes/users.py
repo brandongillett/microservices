@@ -9,8 +9,8 @@ from libs.auth_lib.core.security import (
     verify_password,
 )
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
-from libs.auth_lib.crud import get_user_by_username
-from libs.auth_lib.schemas import UserPublic
+from libs.users_lib.crud import get_user_by_username
+from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
 from src.crud import (

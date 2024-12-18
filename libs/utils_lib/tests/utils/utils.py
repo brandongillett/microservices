@@ -4,7 +4,7 @@ import string
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.models import Users
+from libs.users_lib.models import Users
 
 test_password = "Password@2"
 

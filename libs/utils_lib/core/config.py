@@ -26,6 +26,12 @@ class settings(BaseSettings):
     REDIS_URL: str
     REDIS_TOKENS_URL: str
 
+    # RabbitMQ settings
+    RABBITMQ_SERVER: str
+    RABBITMQ_PORT: int = 5672
+    RABBITMQ_USER: str
+    RABBITMQ_PASSWORD: str
+
     def get_cors_origins(self) -> list[str]:
         if self.ENVIRONMENT == "local":
             return ["*"]
@@ -33,6 +39,17 @@ class settings(BaseSettings):
             return [self.FRONTEND_HOST]
 
     CORS_ORIGINS = property(get_cors_origins)
+
+    def get_rabbitmq_url(self) -> str:
+        """
+        Returns the RabbitMQ URL.
+
+        Returns:
+            str: The RabbitMQ URL.
+        """
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_SERVER}:{self.RABBITMQ_PORT}"
+
+    RABBITMQ_URL = property(get_rabbitmq_url)
 
     def get_database_url(self) -> str:
         """

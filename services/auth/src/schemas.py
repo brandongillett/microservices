@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import EmailStr
 from sqlmodel import SQLModel
 
-from libs.auth_lib.models import RefreshTokenBase
+from src.models import RefreshTokenBase
 
 
 # Token schemas

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
+from faststream.rabbit.fastapi import RabbitRouter
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
@@ -12,6 +13,7 @@ from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 from src.api.v1.main import api_router as v1_router
+from src.broker import main as broker
 
 
 class app_settings(BaseSettings):
@@ -26,7 +28,6 @@ class app_settings(BaseSettings):
 
 
 app_settings = app_settings()  # type: ignore
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
@@ -49,6 +50,11 @@ app = FastAPI(
     docs_url=utils_lib_settings.DOCS_URL,
     lifespan=lifespan,
 )
+
+# Include rabbitmq router
+rabbit_router = RabbitRouter(utils_lib_settings.RABBITMQ_URL)
+rabbit_router.include_router(broker.rabbit_router)
+app.include_router(rabbit_router)
 
 # Set all CORS enabled origins
 app.add_middleware(

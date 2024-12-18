@@ -4,9 +4,10 @@ import pytest
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.models import RefreshTokens, Users
+from libs.users_lib.models import Users
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.tests.conftest import anyio_backend, client
+from src.models import RefreshTokens
 
 __all__ = ["anyio_backend", "client"]
 

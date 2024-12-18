@@ -13,7 +13,9 @@ from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 from src.api.v1.main import api_router as v1_router
 from src.crud import create_root_user
+from libs.utils_lib.core.rabbitmq import rabbit_broker
 
+from libs.users_lib.models import Users
 
 class app_settings(BaseSettings):
     TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [Auth]"
@@ -31,7 +33,6 @@ class app_settings(BaseSettings):
 
 app_settings = app_settings()  # type: ignore
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     _ = app  # Unused variable
@@ -39,6 +40,7 @@ async def lifespan(app: FastAPI) -> Any:
     await session_manager.init_db()
     await redis_client.connect()
     await redis_tokens_client.connect()
+    await rabbit_broker.start()#
     # Create root user
     if (
         utils_lib_settings.ROOT_USER_PASSWORD
@@ -47,12 +49,14 @@ async def lifespan(app: FastAPI) -> Any:
         if not session_manager.session_maker:
             raise Exception("Session manager not initialized")
         async with session_manager.session_maker() as session:
-            await create_root_user(session, utils_lib_settings.ROOT_USER_PASSWORD)
+            root_user = await create_root_user(session, utils_lib_settings.ROOT_USER_PASSWORD)
+            await rabbit_broker.publish(root_user, queue="create_user")
     yield
     # Close database and Redis connections on shutdown
     await session_manager.close()
     await redis_client.close()
     await redis_tokens_client.close()
+    await rabbit_broker.close()
 
 
 app = FastAPI(

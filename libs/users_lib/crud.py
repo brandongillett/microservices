@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.models import Users
+from libs.users_lib.models import Users
 
 
 # CRUD operations for Users

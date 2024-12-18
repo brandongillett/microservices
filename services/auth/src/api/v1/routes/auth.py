@@ -10,8 +10,8 @@ from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
 )
-from libs.auth_lib.crud import get_user_by_email, get_user_by_username
-from libs.auth_lib.schemas import UserPublic
+from libs.users_lib.crud import get_user_by_email, get_user_by_username
+from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings

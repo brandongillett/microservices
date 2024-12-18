@@ -14,6 +14,7 @@ from src.core.security import (
 from src.crud import (
     delete_refresh_token,
     get_refresh_token,
+    get_refresh_tokens,
 )
 from src.schemas import (
     RefreshTokensPublic,
@@ -29,14 +30,16 @@ all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
     response_model=RefreshTokensPublic,
     dependencies=[Depends(all_roles)],
 )
-async def get_refresh_tokens(current_user: current_user) -> RefreshTokensPublic:
+async def get_user_refresh_tokens(
+    session: async_session_dep, current_user: current_user
+) -> RefreshTokensPublic:
     """
     Get the current user refresh tokens.
 
     Returns:
         RefreshTokensPublic: The current user sessions.
     """
-    tokens = current_user.refresh_tokens
+    tokens = await get_refresh_tokens(session=session, user_id=current_user.id)
 
     return RefreshTokensPublic(refresh_tokens=tokens, count=len(tokens))
 
@@ -46,7 +49,7 @@ async def get_refresh_tokens(current_user: current_user) -> RefreshTokensPublic:
     response_model=Message,
     dependencies=[Depends(all_roles)],
 )
-async def revoke_refresh_token(
+async def revoke_user_refresh_token(
     session: async_session_dep,
     current_user: current_user,
     token_id: UUID,

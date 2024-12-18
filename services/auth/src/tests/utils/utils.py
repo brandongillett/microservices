@@ -3,13 +3,14 @@ from uuid import uuid4
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.models import RefreshTokens, Users
+from libs.users_lib.models import Users
 from libs.utils_lib.tests.utils.utils import (
     random_email,
     random_lower_string,
     test_password,
 )
 from src.crud import create_refresh_token, create_user
+from src.models import RefreshTokens
 from src.schemas import RefreshTokenCreate, UserCreate
 
 
