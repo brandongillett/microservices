@@ -58,6 +58,7 @@ async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
     dbObj = Users.model_validate(
         user_create, update={"password": get_password_hash(user_create.password)}
     )
+
     session.add(dbObj)
     await session.commit()
     await session.refresh(dbObj)

@@ -1,14 +1,14 @@
 from typing import Any
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from libs.auth_lib.api.deps import RoleChecker
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.schemas import Message
 from src.crud import update_user_role
+from src.events import update_user_role_event
+from src.schemas import UpdateUserRole
 
 router = APIRouter()
 
@@ -27,7 +27,7 @@ async def get_roles() -> Any:
 
 
 @router.patch("/role", dependencies=[Depends(management_roles)])
-async def update_role(session: async_session_dep, user_id: UUID, role: str) -> Message:
+async def update_role(session: async_session_dep, body: UpdateUserRole) -> Message:
     """
     Update the user role.
 
@@ -35,13 +35,11 @@ async def update_role(session: async_session_dep, user_id: UUID, role: str) -> M
         bool: True
     """
 
-    if role not in auth_lib_security_settings.roles:
+    if body.role not in auth_lib_security_settings.roles:
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    user = await update_user_role(session=session, user_id=user_id, role=role)
+    user = await update_user_role(session=session, user_id=body.user_id, role=body.role)
 
-    await rabbitmq.broker.publish(
-        {"user_id": str(user_id), "role": role}, queue="update_user_role"
-    )
+    await update_user_role_event(user_id=body.user_id, new_role=body.role)
 
-    return Message(message=f"{user.username} role updated to {role}")
+    return Message(message=f"{user.username} role updated to {body.role}")

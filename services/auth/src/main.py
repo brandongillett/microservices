@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import UUID
 
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
@@ -7,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 from libs.auth_lib.core.redis import redis_tokens_client
+from libs.users_lib.schemas import CreateUserEvent
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
@@ -53,8 +55,9 @@ async def lifespan(app: FastAPI) -> Any:
             root_user = await create_root_user(
                 session, utils_lib_settings.ROOT_USER_PASSWORD
             )
-            await rabbitmq.broker.publish(root_user, queue="create_user")
-    await rabbitmq.broker.publish("TEST", queue="test_event")
+            event_id = UUID("00000000-0000-0000-0000-000000000000")
+            event = CreateUserEvent(user=root_user, event_id=event_id)
+            await rabbitmq.broker.publish(event, queue="create_user")
     yield
     # Close database and Redis connections on shutdown
     await session_manager.close()

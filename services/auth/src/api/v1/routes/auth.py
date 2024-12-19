@@ -13,7 +13,6 @@ from libs.auth_lib.core.security import (
 from libs.users_lib.crud import get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings
 from src.core.security import (
@@ -34,6 +33,7 @@ from src.crud import (
     delete_refresh_token,
     get_refresh_tokens,
 )
+from src.events import create_user_event
 from src.schemas import RefreshTokenCreate, Token, UserCreate
 
 router = APIRouter()
@@ -86,7 +86,7 @@ async def register(
     new_user = await create_user(session, user_create=user)
 
     # Publish the user to the broker
-    await rabbitmq.broker.publish(new_user, queue="create_user")
+    await create_user_event(user=new_user)
 
     # Create the user
     return new_user

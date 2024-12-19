@@ -11,17 +11,15 @@ from libs.auth_lib.core.security import (
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.users_lib.crud import get_user_by_username
 from libs.users_lib.schemas import (
-    UpdateUserPasswordEvent,
-    UpdateUserUsernameEvent,
     UserPublic,
 )
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.schemas import Message
 from src.crud import (
     update_user_password,
     update_user_username,
 )
+from src.events import update_user_password_event, update_user_username_event
 from src.schemas import (
     UpdatePassword,
     UpdateUsername,
@@ -91,11 +89,8 @@ async def update_username(
     )
 
     # Publish the new username to the broker
-    await rabbitmq.broker.publish(
-        UpdateUserUsernameEvent(
-            user_id=current_user.id, new_username=body.new_username
-        ),
-        queue="update_user_username",
+    await update_user_username_event(
+        user_id=current_user.id, new_username=body.new_username
     )
 
     return Message(message=f"Username updated to {body.new_username}")
@@ -139,14 +134,13 @@ async def update_password(
         )
 
     # Update the user password
-    user = await update_user_password(
+    await update_user_password(
         session=session, user_id=current_user.id, new_password=body.new_password
     )
 
     # Publish the new password to the broker
-    await rabbitmq.broker.publish(
-        UpdateUserPasswordEvent(user_id=current_user.id, new_password=user.password),
-        queue="update_user_password",
+    await update_user_password_event(
+        user_id=current_user.id, new_password=body.new_password
     )
 
     return Message(message="Password updated successfully")

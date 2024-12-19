@@ -1,16 +1,22 @@
+from uuid import uuid4
+
 from faststream.rabbit.fastapi import RabbitRouter
 
 from libs.users_lib.crud import get_user
+from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
+    CreateUserEvent,
     UpdateUserPasswordEvent,
     UpdateUserRoleEvent,
     UpdateUserUsernameEvent,
 )
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.core.rabbitmq import rabbitmq
 
 rabbit_router = RabbitRouter()
 
 
+# Subscriber events
 @rabbit_router.subscriber("update_user_username")
 async def update_user_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
@@ -66,3 +72,19 @@ async def update_user_role_event(
         session.add(user)
         await session.commit()
         await session.refresh(user)
+
+
+# Publisher events
+async def create_user_event(user: Users) -> None:
+    """
+    Subscribes to a message to create a user.
+
+    Args:
+        user (User): The user to create.
+    """
+
+    event_id = uuid4()
+
+    event = CreateUserEvent(user=user, event_id=event_id)
+
+    await rabbitmq.broker.publish(event, queue="create_user")

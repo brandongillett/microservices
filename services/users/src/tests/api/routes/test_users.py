@@ -49,7 +49,7 @@ async def test_my_details_no_token(client: AsyncClient) -> None:
 async def test_update_username(
     db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
 ) -> None:
-    headers, new_user = await create_and_login_user(db, auth_client)
+    headers, _ = await create_and_login_user(db, auth_client)
 
     new_username = random_lower_string()
 

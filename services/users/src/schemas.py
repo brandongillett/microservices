@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import SQLModel
 
 
@@ -9,3 +11,9 @@ class UpdateUsername(SQLModel):
 class UpdatePassword(SQLModel):
     current_password: str
     new_password: str
+
+
+# Management schemas
+class UpdateUserRole(SQLModel):
+    user_id: UUID
+    role: str
