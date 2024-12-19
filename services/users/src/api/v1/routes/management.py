@@ -26,7 +26,7 @@ async def get_roles() -> Any:
     return auth_lib_security_settings.roles
 
 
-@router.patch("/role", dependencies=[Depends(management_roles)])
+@router.patch("/role", dependencies=[Depends(management_roles)], response_model=Message)
 async def update_role(session: async_session_dep, body: UpdateUserRole) -> Message:
     """
     Update the user role.

@@ -134,13 +134,11 @@ async def update_password(
         )
 
     # Update the user password
-    await update_user_password(
+    user = await update_user_password(
         session=session, user_id=current_user.id, new_password=body.new_password
     )
 
     # Publish the new password to the broker
-    await update_user_password_event(
-        user_id=current_user.id, new_password=body.new_password
-    )
+    await update_user_password_event(user_id=user.id, new_password=user.password)
 
     return Message(message="Password updated successfully")

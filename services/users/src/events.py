@@ -21,7 +21,7 @@ async def _process_create_user_event(
     session: async_session_dep, event: CreateUserEvent
 ) -> None:
     """
-    The actual logic for creating a user. Should be idempotent.
+    Logic to create a user.
 
     Args:
         session: The database session.
@@ -38,9 +38,10 @@ async def _process_create_user_event(
 @rabbit_router.subscriber("create_user")
 async def create_user_event(session: async_session_dep, event: CreateUserEvent) -> None:
     """
-    Subscribes to a message to create a user.
+    Subscribes to an event to create a user.
 
     Args:
+        session: The database session.
         user (User): The user to create.
     """
     if await event_exists(event.event_id):
@@ -60,7 +61,7 @@ async def create_user_event(session: async_session_dep, event: CreateUserEvent) 
 # Publisher events
 async def update_user_username_event(user_id: UUID, new_username: str) -> None:
     """
-    Publishes a message to update a user's username.
+    Publishes an event to update a user's username.
 
     Args:
         user_id (UUID): The user's ID.
@@ -75,7 +76,7 @@ async def update_user_username_event(user_id: UUID, new_username: str) -> None:
 
 async def update_user_password_event(user_id: UUID, new_password: str) -> None:
     """
-    Publishes a message to update a user's password.
+    Publishes a event to update a user's password.
 
     Args:
         user_id (UUID): The user's ID.
@@ -90,7 +91,7 @@ async def update_user_password_event(user_id: UUID, new_password: str) -> None:
 
 async def update_user_role_event(user_id: UUID, new_role: str) -> None:
     """
-    Publishes a message to update a user's role.
+    Publishes an event to update a user's role.
 
     Args:
         user_id (UUID): The user's ID.
