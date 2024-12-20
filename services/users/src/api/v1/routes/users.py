@@ -90,7 +90,7 @@ async def update_username(
 
     # Publish the new username to the broker
     await update_user_username_event(
-        user_id=current_user.id, new_username=body.new_username
+        session=session, user_id=current_user.id, new_username=body.new_username
     )
 
     return Message(message=f"Username updated to {body.new_username}")
@@ -139,6 +139,8 @@ async def update_password(
     )
 
     # Publish the new password to the broker
-    await update_user_password_event(user_id=user.id, new_password=user.password)
+    await update_user_password_event(
+        session=session, user_id=user.id, new_password=user.password
+    )
 
     return Message(message="Password updated successfully")

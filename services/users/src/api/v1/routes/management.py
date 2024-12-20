@@ -40,6 +40,8 @@ async def update_role(session: async_session_dep, body: UpdateUserRole) -> Messa
 
     user = await update_user_role(session=session, user_id=body.user_id, role=body.role)
 
-    await update_user_role_event(user_id=body.user_id, new_role=body.role)
+    await update_user_role_event(
+        session=session, user_id=body.user_id, new_role=body.role
+    )
 
     return Message(message=f"{user.username} role updated to {body.role}")

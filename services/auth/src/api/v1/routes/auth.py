@@ -86,7 +86,7 @@ async def register(
     new_user = await create_user(session, user_create=user)
 
     # Publish the user to the broker
-    await create_user_event(user=new_user)
+    await create_user_event(session=session, user=new_user)
 
     # Create the user
     return new_user

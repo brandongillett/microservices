@@ -1,7 +1,9 @@
 from uuid import UUID, uuid4
 
 from faststream.rabbit.fastapi import RabbitRouter
+from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.users_lib.crud import get_user_by_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
     CreateUserEvent,
@@ -17,6 +19,25 @@ rabbit_router = RabbitRouter()
 
 
 # Subscriber events
+@rabbit_router.subscriber("create_root_user", retry=10)
+async def create_root_user_event(session: async_session_dep, user: Users) -> None:
+    """
+    Subscribes to an event to create a user.
+
+    Args:
+        session: The database session.
+        user (User): The user to create.
+    """
+    user_exists = await get_user_by_username(session, user.username)
+
+    if not user_exists:
+        dbObj = Users.model_validate(user)
+        session.add(dbObj)
+        await session.commit()
+        await session.refresh(dbObj)
+        logger.info("Root user created.")
+
+
 @rabbit_router.subscriber("create_user", retry=10)
 async def create_user_event(session: async_session_dep, event: CreateUserEvent) -> None:
     """
@@ -39,7 +60,9 @@ async def create_user_event(session: async_session_dep, event: CreateUserEvent) 
 
 
 # Publisher events
-async def update_user_username_event(user_id: UUID, new_username: str) -> None:
+async def update_user_username_event(
+    session: AsyncSession, user_id: UUID, new_username: str
+) -> None:
     """
     Publishes an event to update a user's username.
 
@@ -47,6 +70,7 @@ async def update_user_username_event(user_id: UUID, new_username: str) -> None:
         user_id (UUID): The user's ID.
         new_username (str): The new username.
     """
+    _ = session  # will be used later for outbox
     event_id = uuid4()
     event = UpdateUserUsernameEvent(
         event_id=event_id, user_id=user_id, new_username=new_username
@@ -54,7 +78,9 @@ async def update_user_username_event(user_id: UUID, new_username: str) -> None:
     await rabbitmq.broker.publish(event, queue="update_user_username")
 
 
-async def update_user_password_event(user_id: UUID, new_password: str) -> None:
+async def update_user_password_event(
+    session: AsyncSession, user_id: UUID, new_password: str
+) -> None:
     """
     Publishes a event to update a user's password.
 
@@ -62,6 +88,7 @@ async def update_user_password_event(user_id: UUID, new_password: str) -> None:
         user_id (UUID): The user's ID.
         new_password (str): The new password.
     """
+    _ = session  # will be used later for outbox
     event_id = uuid4()
     event = UpdateUserPasswordEvent(
         event_id=event_id, user_id=user_id, new_password=new_password
@@ -69,7 +96,9 @@ async def update_user_password_event(user_id: UUID, new_password: str) -> None:
     await rabbitmq.broker.publish(event, queue="update_user_password")
 
 
-async def update_user_role_event(user_id: UUID, new_role: str) -> None:
+async def update_user_role_event(
+    session: AsyncSession, user_id: UUID, new_role: str
+) -> None:
     """
     Publishes an event to update a user's role.
 
@@ -77,6 +106,8 @@ async def update_user_role_event(user_id: UUID, new_role: str) -> None:
         user_id (UUID): The user's ID.
         new_role (str): The new role.
     """
+    _ = session  # will be used later for outbox
+
     event_id = uuid4()
     event = UpdateUserRoleEvent(event_id=event_id, user_id=user_id, new_role=new_role)
     await rabbitmq.broker.publish(event, queue="update_user_role")

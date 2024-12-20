@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from faststream.rabbit.fastapi import RabbitRouter
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.users_lib.crud import get_user
 from libs.users_lib.models import Users
@@ -106,13 +107,26 @@ async def update_user_role_event(
 
 
 # Publisher events
-async def create_user_event(user: Users) -> None:
+async def create_root_user_event(session: AsyncSession, user: Users) -> None:
     """
     Publishes an event to create a user
 
     Args:
         user (User): The user to create.
     """
+    _ = session  # will use later for outbox
+
+    await rabbitmq.broker.publish(user, queue="create_root_user")
+
+
+async def create_user_event(session: AsyncSession, user: Users) -> None:
+    """
+    Publishes an event to create a user
+
+    Args:
+        user (User): The user to create.
+    """
+    _ = session  # will use later for outbox
 
     event_id = uuid4()
 
