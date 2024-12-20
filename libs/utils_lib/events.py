@@ -1,34 +1,11 @@
-import asyncio
 import logging
+from datetime import timedelta
 from uuid import UUID
 
 from libs.utils_lib.core.redis import redis_client
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-async def retry_task(task, retries: int = 5, delay: int = 2, backoff: bool = True):
-    """
-    Retries a task with exponential backoff.
-
-    Args:
-        task: The task (coroutine) to execute.
-        retries (int): Number of retries.
-        delay (int): Initial delay in seconds.
-        backoff (bool): Whether to use exponential backoff.
-    """
-    attempt = 0
-    while attempt < retries:
-        try:
-            return await task()
-        except Exception as e:
-            attempt += 1
-            if attempt == retries:
-                raise e  # Raise the exception after max retries
-            wait_time = delay * (2**attempt if backoff else 1)  # Exponential backoff
-            logger.error(f"Error: {e}, retrying in {wait_time} seconds...")
-            await asyncio.sleep(wait_time)
 
 
 async def mark_event_processed(event_id: UUID) -> None:
@@ -39,7 +16,7 @@ async def mark_event_processed(event_id: UUID) -> None:
         event_id (UUID): The event to mark as processed.
     """
     client = await redis_client.get_client()
-    await client.set(f"{str(event_id)}_processed", "true")
+    await client.set(f"{str(event_id)}_processed", "true", ex=timedelta(days=1))
 
 
 async def event_exists(event_id: UUID) -> bool:

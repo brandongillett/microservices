@@ -11,31 +11,13 @@ from libs.users_lib.schemas import (
 )
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.rabbitmq import rabbitmq
-from libs.utils_lib.events import event_exists, logger, mark_event_processed, retry_task
+from libs.utils_lib.events import event_exists, logger, mark_event_processed
 
 rabbit_router = RabbitRouter()
 
 
 # Subscriber events
-async def _process_create_user_event(
-    session: async_session_dep, event: CreateUserEvent
-) -> None:
-    """
-    Logic to create a user.
-
-    Args:
-        session: The database session.
-        event: The event containing the user details to be created.
-    """
-    dbObj = Users.model_validate(event.user)
-    session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
-
-    await mark_event_processed(event.event_id)
-
-
-@rabbit_router.subscriber("create_user")
+@rabbit_router.subscriber("create_user", retry=10)
 async def create_user_event(session: async_session_dep, event: CreateUserEvent) -> None:
     """
     Subscribes to an event to create a user.
@@ -48,14 +30,12 @@ async def create_user_event(session: async_session_dep, event: CreateUserEvent) 
         logger.info(f"Event {event.event_id} already processed.")
         return
 
-    try:
-        # Retry the task if it fails
-        await retry_task(
-            lambda: _process_create_user_event(session, event), retries=5, delay=2
-        )
-    except Exception as e:
-        logger.error(f"Failed to process event {event.event_id}: {str(e)}")
-        # Event to revert the user creation for auth service (will be implemented in the future)
+    dbObj = Users.model_validate(event.user)
+    session.add(dbObj)
+    await session.commit()
+    await session.refresh(dbObj)
+
+    await mark_event_processed(event.event_id)
 
 
 # Publisher events
