@@ -12,7 +12,7 @@ from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
-from src import events
+from src.api import events
 from src.api.v1.main import api_router as v1_router
 
 

@@ -15,11 +15,11 @@ from libs.users_lib.schemas import (
 )
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
+from src.api.events import update_user_password_event, update_user_username_event
 from src.crud import (
     update_user_password,
     update_user_username,
 )
-from src.events import update_user_password_event, update_user_username_event
 from src.schemas import (
     UpdatePassword,
     UpdateUsername,

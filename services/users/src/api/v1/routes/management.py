@@ -6,8 +6,8 @@ from libs.auth_lib.api.deps import RoleChecker
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
+from src.api.events import update_user_role_event
 from src.crud import update_user_role
-from src.events import update_user_role_event
 from src.schemas import UpdateUserRole
 
 router = APIRouter()

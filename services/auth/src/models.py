@@ -4,8 +4,9 @@ from uuid import UUID, uuid4
 from sqlmodel import Field, SQLModel
 
 from libs.users_lib.models import Users
+from libs.utils_lib.models import EventInbox, EventOutbox
 
-__all__ = ["Users"]
+__all__ = ["Users", "EventInbox", "EventOutbox"]
 
 
 # Base models

@@ -15,6 +15,7 @@ from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings
+from src.api.events import create_user_event
 from src.core.security import (
     blacklist_access_token,
     gen_token,
@@ -33,7 +34,6 @@ from src.crud import (
     delete_refresh_token,
     get_refresh_tokens,
 )
-from src.events import create_user_event
 from src.schemas import RefreshTokenCreate, Token, UserCreate
 
 router = APIRouter()

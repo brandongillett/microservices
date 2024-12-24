@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import uuid4
 
 from faststream.rabbit.fastapi import RabbitRouter
@@ -13,13 +14,14 @@ from libs.users_lib.schemas import (
 )
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.rabbitmq import rabbitmq
-from libs.utils_lib.events import event_exists, logger, mark_event_processed
+from libs.utils_lib.crud import create_inbox_event, create_outbox_event, get_inbox_event
+from libs.utils_lib.events import logger
 
 rabbit_router = RabbitRouter()
 
 
 # Subscriber events
-@rabbit_router.subscriber("update_user_username", retry=10)
+@rabbit_router.subscriber("update_user_username", retry=True)
 async def update_user_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
 ) -> None:
@@ -30,9 +32,19 @@ async def update_user_username_event(
         session: The database session.
         data: The event containing the user details to be updated.
     """
-    if await event_exists(data.event_id):
+    event = await get_inbox_event(session, data.event_id)
+    event_type = "update_user_username"
+
+    if event and event.processed:
         logger.info(f"Event {data.event_id} already processed.")
         return
+
+    if not event:
+        data_json = data.model_dump(mode="json")
+        event = await create_inbox_event(session, data.event_id, event_type, data_json)
+    else:
+        event.retries += 1
+        await session.commit()
 
     user = await get_user(session, data.user_id)
 
@@ -45,10 +57,12 @@ async def update_user_username_event(
     await session.commit()
     await session.refresh(user)
 
-    await mark_event_processed(data.event_id)
+    event.processed = True
+    event.processed_at = datetime.utcnow()
+    await session.commit()
 
 
-@rabbit_router.subscriber("update_user_password", retry=10)
+@rabbit_router.subscriber("update_user_password", retry=True)
 async def update_user_password_event(
     session: async_session_dep, data: UpdateUserPasswordEvent
 ) -> None:
@@ -59,9 +73,19 @@ async def update_user_password_event(
         session: The database session.
         data: The event containing the user details to be updated
     """
-    if await event_exists(data.event_id):
+    event = await get_inbox_event(session, data.event_id)
+    event_type = "update_user_password"
+
+    if event and event.processed:
         logger.info(f"Event {data.event_id} already processed.")
         return
+
+    if not event:
+        data_json = data.model_dump(mode="json")
+        event = await create_inbox_event(session, data.event_id, event_type, data_json)
+    else:
+        event.retries += 1
+        await session.commit()
 
     user = await get_user(session, data.user_id)
 
@@ -74,10 +98,12 @@ async def update_user_password_event(
     await session.commit()
     await session.refresh(user)
 
-    await mark_event_processed(data.event_id)
+    event.processed = True
+    event.processed_at = datetime.utcnow()
+    await session.commit()
 
 
-@rabbit_router.subscriber("update_user_role", retry=10)
+@rabbit_router.subscriber("update_user_role", retry=True)
 async def update_user_role_event(
     session: async_session_dep, data: UpdateUserRoleEvent
 ) -> None:
@@ -88,9 +114,19 @@ async def update_user_role_event(
         session: The database session.
         data: The event containing the user details to be updated
     """
-    if await event_exists(data.event_id):
+    event = await get_inbox_event(session, data.event_id)
+    event_type = "update_user_role"
+
+    if event and event.processed:
         logger.info(f"Event {data.event_id} already processed.")
         return
+
+    if not event:
+        data_json = data.model_dump(mode="json")
+        event = await create_inbox_event(session, data.event_id, event_type, data_json)
+    else:
+        event.retries += 1
+        await session.commit()
 
     user = await get_user(session, data.user_id)
 
@@ -103,7 +139,9 @@ async def update_user_role_event(
     await session.commit()
     await session.refresh(user)
 
-    await mark_event_processed(data.event_id)
+    event.processed = True
+    event.processed_at = datetime.utcnow()
+    await session.commit()
 
 
 # Publisher events
@@ -129,7 +167,21 @@ async def create_user_event(session: AsyncSession, user: Users) -> None:
     _ = session  # will use later for outbox
 
     event_id = uuid4()
+    event_type = "create_user"
+    event_schema = CreateUserEvent(event_id=event_id, user=user)
 
-    event = CreateUserEvent(user=user, event_id=event_id)
+    event_data = event_schema.model_dump(mode="json")
 
-    await rabbitmq.broker.publish(event, queue="create_user")
+    event = await create_outbox_event(
+        session=session, event_id=event_id, event_type=event_type, data=event_data
+    )
+
+    try:
+        await rabbitmq.broker.publish(event_schema, queue=event_type)
+        event.published = True
+        event.published_at = datetime.utcnow()
+        await session.commit()
+    except Exception as e:
+        logger.error(f"Error publishing event: {event_id}")
+        event.error_message = str(e)
+        await session.commit()
