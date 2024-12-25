@@ -1,4 +1,3 @@
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from faststream.rabbit.fastapi import RabbitRouter
@@ -13,9 +12,7 @@ from libs.users_lib.schemas import (
     UpdateUserUsernameEvent,
 )
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.core.rabbitmq import rabbitmq
-from libs.utils_lib.crud import create_inbox_event, create_outbox_event, get_inbox_event
-from libs.utils_lib.events import logger
+from libs.utils_lib.events import handle_publish_event, handle_subscriber_event, logger
 
 rabbit_router = RabbitRouter()
 
@@ -49,28 +46,30 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
         session: The database session.
         user (User): The user to create.
     """
-    event = await get_inbox_event(session, data.event_id)
-    event_type = "create_user"
 
-    if event and event.processed:
-        logger.info(f"Event {data.event_id} already processed.")
-        return
+    async def process_create_user(session: AsyncSession, data: CreateUserEvent) -> None:
+        """
+        Processes the logic for creating a user.
 
-    if not event:
-        data_json = data.model_dump(mode="json")
-        event = await create_inbox_event(session, data.event_id, event_type, data_json)
-    else:
-        event.retries += 1
+        Args:
+            session: The database session.
+            data: The event containing the user details to be created.
+
+        Returns:
+            None
+        """
+        dbObj = Users.model_validate(data.user)
+        session.add(dbObj)
         await session.commit()
+        await session.refresh(dbObj)
 
-    dbObj = Users.model_validate(data.user)
-    session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
-
-    event.processed = True
-    event.processed_at = datetime.utcnow()
-    await session.commit()
+    await handle_subscriber_event(
+        session=session,
+        event_id=data.event_id,
+        event_type="create_user",
+        process_fn=process_create_user,
+        data=data,
+    )
 
 
 # Publisher events
@@ -84,27 +83,12 @@ async def update_user_username_event(
         user_id (UUID): The user's ID.
         new_username (str): The new username.
     """
-    event_id = uuid4()
-    event_type = "update_user_username"
     event_schema = UpdateUserUsernameEvent(
-        event_id=event_id, user_id=user_id, new_username=new_username
+        event_id=uuid4(), user_id=user_id, new_username=new_username
     )
-
-    event_data = event_schema.model_dump(mode="json")
-
-    event = await create_outbox_event(
-        session=session, event_id=event_id, event_type=event_type, data=event_data
+    await handle_publish_event(
+        session=session, event_type="update_user_username", event_schema=event_schema
     )
-
-    try:
-        await rabbitmq.broker.publish(event_schema, queue=event_type)
-        event.published = True
-        event.published_at = datetime.utcnow()
-        await session.commit()
-    except Exception as e:
-        logger.error(f"Error publishing event: {event_id}")
-        event.error_message = str(e)
-        await session.commit()
 
 
 async def update_user_password_event(
@@ -117,27 +101,12 @@ async def update_user_password_event(
         user_id (UUID): The user's ID.
         new_password (str): The new password.
     """
-    event_id = uuid4()
-    event_type = "update_user_password"
     event_schema = UpdateUserPasswordEvent(
-        event_id=event_id, user_id=user_id, new_password=new_password
+        event_id=uuid4(), user_id=user_id, new_password=new_password
     )
-
-    event_data = event_schema.model_dump(mode="json")
-
-    event = await create_outbox_event(
-        session=session, event_id=event_id, event_type=event_type, data=event_data
+    await handle_publish_event(
+        session=session, event_type="update_user_password", event_schema=event_schema
     )
-
-    try:
-        await rabbitmq.broker.publish(event_schema, queue=event_type)
-        event.published = True
-        event.published_at = datetime.utcnow()
-        await session.commit()
-    except Exception as e:
-        logger.error(f"Error publishing event: {event_id}")
-        event.error_message = str(e)
-        await session.commit()
 
 
 async def update_user_role_event(
@@ -150,24 +119,9 @@ async def update_user_role_event(
         user_id (UUID): The user's ID.
         new_role (str): The new role.
     """
-    event_id = uuid4()
-    event_type = "update_user_role"
     event_schema = UpdateUserRoleEvent(
-        event_id=event_id, user_id=user_id, new_role=new_role
+        event_id=uuid4(), user_id=user_id, new_role=new_role
     )
-
-    event_data = event_schema.model_dump(mode="json")
-
-    event = await create_outbox_event(
-        session=session, event_id=event_id, event_type=event_type, data=event_data
+    await handle_publish_event(
+        session=session, event_type="update_user_role", event_schema=event_schema
     )
-
-    try:
-        await rabbitmq.broker.publish(event_schema, queue=event_type)
-        event.published = True
-        event.published_at = datetime.utcnow()
-        await session.commit()
-    except Exception as e:
-        logger.error(f"Error publishing event: {event_id}")
-        event.error_message = str(e)
-        await session.commit()

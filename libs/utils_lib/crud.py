@@ -58,8 +58,6 @@ async def create_outbox_event(
     Returns:
         EventOutbox: The event outbox record.
     """
-    print("Event data:", type(data))
-
     event_outbox = EventOutbox(id=event_id, event_type=event_type, data=data)
     session.add(event_outbox)
     await session.commit()

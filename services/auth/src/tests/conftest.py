@@ -23,9 +23,7 @@ async def lifespan() -> AsyncGenerator[None, None]:
 @pytest.fixture(scope="session", autouse=True)
 async def db() -> AsyncGenerator[AsyncSession, None]:
     await session_manager.init_db()
-    if not session_manager.session_maker:
-        raise Exception("Session manager not initialized")
-    async with session_manager.session_maker() as session:
+    async with session_manager.get_session() as session:
         yield session
 
         statement = delete(RefreshTokens)

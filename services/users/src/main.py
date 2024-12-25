@@ -25,6 +25,9 @@ class app_settings(BaseSettings):
     - Allows users to view their account details.
     - Allows users to update their account details.
     """
+    swagger_ui_parameters: dict[str, Any] = {
+        "displayRequestDuration": True,
+    }
 
 
 app_settings = app_settings()  # type: ignore
@@ -33,13 +36,13 @@ app_settings = app_settings()  # type: ignore
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     _ = app  # Unused variable
-    # Initialize database and Redis connections on startup
+    # Initialize database, Redis, and RabbitMQ connections on startup
     await session_manager.init_db()
     await redis_client.connect()
     await redis_tokens_client.connect()
     await rabbitmq.start()
     yield
-    # Close database and Redis connections on shutdown
+    # Close database, Redis, and RabbitMQ connections on shutdown
     await session_manager.close()
     await redis_client.close()
     await redis_tokens_client.close()
@@ -52,6 +55,7 @@ app = FastAPI(
     description=app_settings.DESCRIPTION,
     docs_url=utils_lib_settings.DOCS_URL,
     lifespan=lifespan,
+    swagger_ui_parameters=app_settings.swagger_ui_parameters,
 )
 
 # Include rabbitmq router

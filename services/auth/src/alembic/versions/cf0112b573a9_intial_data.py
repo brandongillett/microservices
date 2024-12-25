@@ -1,7 +1,7 @@
 """intial data
 
 Revision ID: cf0112b573a9
-Revises: 
+Revises:
 Create Date: 2024-12-23 23:33:40.983702
 
 """

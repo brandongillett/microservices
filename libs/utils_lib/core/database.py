@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -51,6 +53,14 @@ class DatabaseSessionManager:
         #     await conn.run_sync(SQLModel.metadata.create_all)
 
         logger.info("Database initialized successfully.")
+
+    @asynccontextmanager
+    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
+        if not self.session_maker:
+            raise RuntimeError("Session maker is not initialized")
+
+        async with self.session_maker() as session:
+            yield session
 
     async def close(self) -> None:
         """
