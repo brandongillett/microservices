@@ -129,6 +129,17 @@ async def test_update_password(
     user = await get_user_by_username(session=db, username=new_user.username)
     assert user is not None, "User not found"
 
+    # Make sure event is getting sent to auth service (we will check this by logging in with new password)
+    # await asyncio.sleep(1) # Sleep for 1 second to make sure event is sent
+
+    # login_data = {
+    #     "username": new_user.username,
+    #     "password": new_password,
+    # }
+
+    # login_response = await auth_client.post("/login", data=login_data)
+    # assert login_response.status_code == 200
+
     assert update_response.status_code == 200
     assert verify_password(new_password, user.password)
 

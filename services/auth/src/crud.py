@@ -211,7 +211,8 @@ async def delete_expired_tokens(session: AsyncSession, user_id: UUID) -> None:
     """
     result = await session.exec(
         select(RefreshTokens).where(
-            RefreshTokens.user_id == user_id, RefreshTokens.expires < datetime.utcnow()
+            RefreshTokens.user_id == user_id,
+            RefreshTokens.expires_at < datetime.utcnow(),
         )
     )
 
@@ -238,7 +239,7 @@ async def delete_max_tokens(session: AsyncSession, user_id: UUID) -> None:
     count = len(session_tokens)
 
     if count > api_settings.MAX_REFRESH_TOKENS:
-        session_tokens.sort(key=lambda token: token.last_used)
+        session_tokens.sort(key=lambda token: token.last_used_at)
 
         while len(session_tokens) > api_settings.MAX_REFRESH_TOKENS:
             await session.delete(session_tokens[0])

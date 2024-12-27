@@ -87,12 +87,10 @@ async def handle_publish_event(
     event_id = event_schema.event_id
     event_data = event_schema.model_dump(mode="json")
 
-    # Create an outbox event in the database
     event = await create_outbox_event(
         session=session, event_id=event_id, event_type=event_type, data=event_data
     )
 
-    # Publish the event to RabbitMQ
     try:
         await rabbitmq.broker.publish(event_schema, queue=event_type)
         event.published = True

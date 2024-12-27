@@ -189,6 +189,8 @@ services:
             - src/alembic
             - htmlcov
             - libs
+        - path: ./services/auth/pyproject.toml
+          action: rebuild
     volumes:
       - ./libs:/app/libs
       - ./services/auth/src/alembic:/app/src/alembic
@@ -238,6 +240,8 @@ services:
             - src/alembic
             - htmlcov
             - libs
+        - path: ./services/users/pyproject.toml
+          action: rebuild
     volumes:
       - ./libs:/app/libs
       - ./services/users/src/alembic:/app/src/alembic

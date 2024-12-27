@@ -11,10 +11,10 @@ __all__ = ["Users", "EventInbox", "EventOutbox"]
 
 # Base models
 class RefreshTokenBase(SQLModel):
-    created: datetime
-    expires: datetime
-    last_used: datetime
-    ip_address: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_used_at: datetime = Field(default_factory=datetime.utcnow)
+    expires_at: datetime
+    ip_address: str = Field(max_length=45, nullable=False)
 
 
 # Database models

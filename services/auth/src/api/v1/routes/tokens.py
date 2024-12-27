@@ -72,7 +72,7 @@ async def revoke_user_refresh_token(
     if not refresh_token:
         raise HTTPException(status_code=400, detail="Refresh token not found")
 
-    last_used = refresh_token.last_used
+    last_used_at = refresh_token.last_used_at
     current_time = datetime.utcnow()
 
     # Delete the refresh token from the database
@@ -81,12 +81,12 @@ async def revoke_user_refresh_token(
     )
 
     # Add Access JTI to redis blacklist if access token has not expired
-    if (current_time - last_used) < timedelta(
+    if (current_time - last_used_at) < timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     ):
         expiration_time = timedelta(
             minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        ) - (current_time - last_used)
+        ) - (current_time - last_used_at)
         await blacklist_access_token(refresh_token.access_jti, expiration_time)
 
     return Message(message="Refresh token deleted successfully")

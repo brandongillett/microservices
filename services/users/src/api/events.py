@@ -12,7 +12,11 @@ from libs.users_lib.schemas import (
     UpdateUserUsernameEvent,
 )
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.events import handle_publish_event, handle_subscriber_event, logger
+from libs.utils_lib.api.events import (
+    handle_publish_event,
+    handle_subscriber_event,
+    logger,
+)
 
 rabbit_router = RabbitRouter()
 

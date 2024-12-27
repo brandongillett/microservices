@@ -16,9 +16,9 @@ class UserBase(SQLModel):
         max_length=auth_lib_security_settings.USERNAME_MAX_LENGTH,
     )
     email: EmailStr = Field(unique=True, index=True, max_length=255)
-    created: datetime = Field(default_factory=datetime.utcnow)
-    disabled: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     role: str = Field(default="user")
+    disabled: bool = False
 
 
 # Database models

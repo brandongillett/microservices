@@ -27,9 +27,9 @@ async def test_create_refresh_token(db: AsyncSession) -> None:
     assert new_token.user_id == new_user.id
     assert new_token.refresh_jti
     assert new_token.access_jti
-    assert new_token.created
-    assert new_token.expires
-    assert new_token.last_used
+    assert new_token.created_at
+    assert new_token.expires_at
+    assert new_token.last_used_at
     assert new_token.ip_address
 
 
@@ -95,9 +95,9 @@ async def test_delete_expired_tokens(db: AsyncSession) -> None:
             user_id=new_user.id,
             refresh_jti=uuid4(),
             access_jti=uuid4(),
-            created=current_time,
-            expires=current_time - timedelta(days=1),
-            last_used=current_time,
+            created_at=current_time,
+            expires_at=current_time - timedelta(days=1),
+            last_used_at=current_time,
             ip_address="0.0.0.0",
         ),
     )
@@ -107,9 +107,9 @@ async def test_delete_expired_tokens(db: AsyncSession) -> None:
             user_id=new_user.id,
             refresh_jti=uuid4(),
             access_jti=uuid4(),
-            created=current_time,
-            expires=current_time + timedelta(days=1),
-            last_used=current_time,
+            created_at=current_time,
+            expires_at=current_time + timedelta(days=1),
+            last_used_at=current_time,
             ip_address="0.0.0.0",
         ),
     )
@@ -142,9 +142,9 @@ async def test_delete_max_tokens(db: AsyncSession) -> None:
                 user_id=new_user.id,
                 refresh_jti=random_jti,
                 access_jti=random_jti,
-                created=current_time,
-                expires=current_time + timedelta(days=1),
-                last_used=current_time,
+                created_at=current_time,
+                expires_at=current_time + timedelta(days=1),
+                last_used_at=current_time,
                 ip_address="",
             ),
         )

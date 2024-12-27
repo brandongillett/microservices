@@ -1,8 +1,8 @@
-"""intial data
+"""initial data
 
-Revision ID: cf0112b573a9
-Revises:
-Create Date: 2024-12-23 23:33:40.983702
+Revision ID: f6785c5e0113
+Revises: 
+Create Date: 2024-12-26 22:20:28.610808
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'cf0112b573a9'
+revision: str = 'f6785c5e0113'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -46,9 +46,9 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(length=22), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
-    sa.Column('created', sa.DateTime(), nullable=False),
-    sa.Column('disabled', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('role', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('disabled', sa.Boolean(), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('password', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -56,10 +56,10 @@ def upgrade() -> None:
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     op.create_table('refreshtokens',
-    sa.Column('created', sa.DateTime(), nullable=False),
-    sa.Column('expires', sa.DateTime(), nullable=False),
-    sa.Column('last_used', sa.DateTime(), nullable=False),
-    sa.Column('ip_address', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('last_used_at', sa.DateTime(), nullable=False),
+    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('ip_address', sqlmodel.sql.sqltypes.AutoString(length=45), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
     sa.Column('refresh_jti', sa.Uuid(), nullable=False),

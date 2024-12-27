@@ -25,9 +25,9 @@ class RefreshTokenCreate(SQLModel):
     refresh_jti: UUID
     access_jti: UUID
     user_id: UUID
-    created: datetime
-    expires: datetime
-    last_used: datetime
+    created_at: datetime
+    expires_at: datetime
+    last_used_at: datetime
     ip_address: str
 
 

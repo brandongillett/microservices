@@ -143,7 +143,7 @@ async def login(
             detail=invalid_message,
             headers={"WWW-Authenticate": "Bearer"},
         )
-    elif user.disabled:
+    if user.disabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
@@ -159,7 +159,8 @@ async def login(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token, access_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role}, expire=access_token_expires
+        data={"sub": str(user.id), "role": user.role, "token_type": "access"},
+        expire=access_token_expires,
     )
 
     # Generate refresh token and store JTI in database
@@ -167,15 +168,16 @@ async def login(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     refresh_token, refresh_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role}, expire=refresh_token_expires
+        data={"sub": str(user.id), "role": user.role, "token_type": "refresh"},
+        expire=refresh_token_expires,
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
         refresh_jti=refresh_jti,
         access_jti=access_jti,
-        created=current_time,
-        expires=refresh_token_expires,
-        last_used=current_time,
+        created_at=current_time,
+        expires_at=refresh_token_expires,
+        last_used_at=current_time,
         ip_address=ip_address,
     )
     await create_refresh_token(
@@ -235,7 +237,7 @@ async def logout(
         session=session, user_id=user.id, refresh_jti=refresh_jti
     )
     if authenticate_token:
-        last_used = authenticate_token.last_used
+        last_used_at = authenticate_token.last_used_at
         current_time = datetime.utcnow()
 
         # Delete the refresh token from the database
@@ -244,12 +246,12 @@ async def logout(
         )
 
         # Add Access JTI to redis blacklist if access token has not expired
-        if (current_time - last_used) < timedelta(
+        if (current_time - last_used_at) < timedelta(
             minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
         ):
             expiration_time = timedelta(
                 minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-            ) - (current_time - last_used)
+            ) - (current_time - last_used_at)
             await blacklist_access_token(authenticate_token.access_jti, expiration_time)
 
     response.delete_cookie(key="refresh_token")
@@ -297,7 +299,7 @@ async def refresh_access_token(
         )
 
     current_time = datetime.utcnow()
-    prev_last_used = prev_refresh_token.last_used
+    prev_last_used_at = prev_refresh_token.last_used_at
     ip_address = get_client_ip(request)
 
     # Delete the previous refresh token from the database
@@ -306,12 +308,12 @@ async def refresh_access_token(
     )
 
     # Add Access JTI to redis blacklist if access token has not expired
-    if (current_time - prev_last_used) < timedelta(
+    if (current_time - prev_last_used_at) < timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     ):
         expiration_time = timedelta(
             minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        ) - (current_time - prev_last_used)
+        ) - (current_time - prev_last_used_at)
         await blacklist_access_token(prev_refresh_token.access_jti, expiration_time)
 
     # Create a new access token
@@ -319,7 +321,8 @@ async def refresh_access_token(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token, access_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role}, expire=access_token_expires
+        data={"sub": str(user.id), "role": user.role, "token_type": "access"},
+        expire=access_token_expires,
     )
 
     # Create a new refresh token and store JTI in database
@@ -327,15 +330,16 @@ async def refresh_access_token(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     new_refresh_token, new_refresh_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role}, expire=new_refresh_token_expires
+        data={"sub": str(user.id), "role": user.role, "token_type": "refresh"},
+        expire=new_refresh_token_expires,
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
         refresh_jti=new_refresh_jti,
         access_jti=access_jti,
-        created=prev_refresh_token.created,
-        expires=new_refresh_token_expires,
-        last_used=current_time,
+        created_at=prev_refresh_token.created_at,
+        expires_at=new_refresh_token_expires,
+        last_used_at=current_time,
         ip_address=ip_address,
     )
     await create_refresh_token(
