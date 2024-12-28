@@ -1,7 +1,7 @@
 """initial data
 
 Revision ID: ad589749c020
-Revises: 
+Revises:
 Create Date: 2024-12-26 22:20:56.840720
 
 """

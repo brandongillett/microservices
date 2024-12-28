@@ -10,12 +10,12 @@ from src.crud import (
     update_user_password,
     update_user_username,
 )
-from src.tests.utils.utils import create_random_user
+from src.tests.utils.utils import create_random_user_helper
 
 
 @pytest.mark.anyio
 async def test_update_user_username(db: AsyncSession) -> None:
-    new_user = await create_random_user(db)
+    new_user = await create_random_user_helper(db)
 
     new_username = random_lower_string()
 
@@ -31,7 +31,7 @@ async def test_update_user_username(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_update_user_password(db: AsyncSession) -> None:
-    new_user = await create_random_user(db)
+    new_user = await create_random_user_helper(db)
 
     new_password = "NewPassword@2"
 

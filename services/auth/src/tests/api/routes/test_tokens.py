@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.utils_lib.tests.utils.utils import create_and_login_user
+from libs.utils_lib.tests.utils.utils import create_and_login_user_helper
 from src.crud import create_refresh_token
 from src.schemas import RefreshTokenCreate
 
@@ -13,7 +13,7 @@ from src.schemas import RefreshTokenCreate
 # User Sessions
 @pytest.mark.anyio
 async def test_get_refresh_tokens(db: AsyncSession, client: AsyncClient) -> None:
-    headers, new_user = await create_and_login_user(db, client)
+    headers, new_user = await create_and_login_user_helper(db, client)
 
     current_time = datetime.utcnow()
 
@@ -42,7 +42,7 @@ async def test_get_refresh_tokens(db: AsyncSession, client: AsyncClient) -> None
 
 @pytest.mark.anyio
 async def test_revoke_refresh_token(db: AsyncSession, client: AsyncClient) -> None:
-    headers, new_user = await create_and_login_user(db, client)
+    headers, new_user = await create_and_login_user_helper(db, client)
 
     current_time = datetime.utcnow()
 
@@ -86,7 +86,7 @@ async def test_revoke_refresh_token(db: AsyncSession, client: AsyncClient) -> No
 async def test_revoke_refresh_token_invalid_token(
     db: AsyncSession, client: AsyncClient
 ) -> None:
-    headers, _ = await create_and_login_user(db, client)
+    headers, _ = await create_and_login_user_helper(db, client)
 
     revoke_response = await client.delete(
         f"/tokens/{uuid4()}",
