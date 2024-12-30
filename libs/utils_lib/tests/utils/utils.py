@@ -18,7 +18,7 @@ def random_email() -> str:
     return f"{random_lower_string()}@{random_lower_string()}.com"
 
 
-async def create_and_login_user(
+async def create_and_login_user_helper(
     db: AsyncSession, client: AsyncClient
 ) -> tuple[dict[str, str], Users]:
     """Helper function to create a user and login."""
@@ -44,7 +44,7 @@ async def create_and_login_user(
     return headers, new_user
 
 
-async def login_root_user(auth_client: AsyncClient) -> dict[str, str]:
+async def login_root_user_helper(auth_client: AsyncClient) -> dict[str, str]:
     """
     Login the root user.
 

@@ -1,8 +1,14 @@
 """initial data
 
+<<<<<<< HEAD:services/auth/src/alembic/versions/76be91f946f4_initial_data.py
 Revision ID: 76be91f946f4
 Revises: 
 Create Date: 2024-12-30 06:30:47.778088
+=======
+Revision ID: f6785c5e0113
+Revises:
+Create Date: 2024-12-26 22:20:28.610808
+>>>>>>> 44f8af8c21f3df239d68082c261a2f2a7e1d4084:services/auth/src/alembic/versions/f6785c5e0113_initial_data.py
 
 """
 from typing import Sequence, Union

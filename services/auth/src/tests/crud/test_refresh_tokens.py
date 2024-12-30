@@ -15,12 +15,12 @@ from src.crud import (
     get_refresh_tokens,
 )
 from src.schemas import RefreshTokenCreate
-from src.tests.utils.utils import create_user_and_token
+from src.tests.utils.utils import create_user_and_token_helper
 
 
 @pytest.mark.anyio
 async def test_create_refresh_token(db: AsyncSession) -> None:
-    new_user, new_token = await create_user_and_token(db)
+    new_user, new_token = await create_user_and_token_helper(db)
 
     assert new_token
     assert new_token.id
@@ -35,7 +35,7 @@ async def test_create_refresh_token(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_authenticate_refresh_token(db: AsyncSession) -> None:
-    new_user, new_token = await create_user_and_token(db)
+    new_user, new_token = await create_user_and_token_helper(db)
 
     authenticated_token = await authenticate_refresh_token(
         session=db, user_id=new_user.id, refresh_jti=new_token.refresh_jti
@@ -47,7 +47,7 @@ async def test_authenticate_refresh_token(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_delete_refresh_token(db: AsyncSession) -> None:
-    new_user, new_token = await create_user_and_token(db)
+    new_user, new_token = await create_user_and_token_helper(db)
 
     await delete_refresh_token(
         session=db, user_id=new_user.id, refresh_token_id=new_token.id
@@ -62,7 +62,7 @@ async def test_delete_refresh_token(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_get_refresh_token(db: AsyncSession) -> None:
-    new_user, new_token = await create_user_and_token(db)
+    new_user, new_token = await create_user_and_token_helper(db)
 
     token = await get_refresh_token(
         session=db, user_id=new_user.id, refresh_token_id=new_token.id
@@ -74,7 +74,7 @@ async def test_get_refresh_token(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_get_refresh_tokens(db: AsyncSession) -> None:
-    new_user, token = await create_user_and_token(db)
+    new_user, token = await create_user_and_token_helper(db)
 
     tokens = await get_refresh_tokens(session=db, user_id=new_user.id)
 
@@ -85,7 +85,7 @@ async def test_get_refresh_tokens(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_delete_expired_tokens(db: AsyncSession) -> None:
-    new_user, _ = await create_user_and_token(db)
+    new_user, _ = await create_user_and_token_helper(db)
 
     current_time = datetime.utcnow()
 
@@ -130,7 +130,7 @@ async def test_delete_expired_tokens(db: AsyncSession) -> None:
 
 @pytest.mark.anyio
 async def test_delete_max_tokens(db: AsyncSession) -> None:
-    new_user, _ = await create_user_and_token(db)
+    new_user, _ = await create_user_and_token_helper(db)
 
     current_time = datetime.utcnow()
 

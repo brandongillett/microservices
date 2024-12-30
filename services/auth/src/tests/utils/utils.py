@@ -14,7 +14,7 @@ from src.models import RefreshTokens
 from src.schemas import RefreshTokenCreate, UserCreate
 
 
-async def create_user_and_token(db: AsyncSession) -> tuple[Users, RefreshTokens]:
+async def create_user_and_token_helper(db: AsyncSession) -> tuple[Users, RefreshTokens]:
     """Helper function to create a user and a refresh token."""
     username = random_lower_string()
     email = random_email()

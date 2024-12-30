@@ -9,7 +9,7 @@ from libs.utils_lib.tests.utils.utils import (
 )
 
 
-async def create_random_user(db: AsyncSession) -> Users:
+async def create_random_user_helper(db: AsyncSession) -> Users:
     """
     Create a random user.
 
