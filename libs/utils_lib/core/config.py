@@ -93,6 +93,7 @@ class settings(BaseSettings):
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("MYSQL_PASSWORD", self.MYSQL_PASSWORD)
         self._check_default_secret("ROOT_USER_PASSWORD", self.ROOT_USER_PASSWORD)
+        self._check_default_secret("RABBITMQ_PASSWORD", self.RABBITMQ_PASSWORD)
 
         return self
 

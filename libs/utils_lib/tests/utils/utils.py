@@ -5,6 +5,7 @@ from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.users_lib.models import Users
+from libs.utils_lib.core.config import settings as utils_lib_settings
 
 test_password = "Password@2"
 
@@ -41,3 +42,23 @@ async def create_and_login_user(
 
     headers = {"Authorization": f"Bearer {token}"}
     return headers, new_user
+
+
+async def login_root_user(auth_client: AsyncClient) -> dict[str, str]:
+    """
+    Login the root user.
+
+    Args:
+        auth_client (AsyncClient): The auth client.
+
+    Returns:
+        str: The access token.
+    """
+    login_response = await auth_client.post(
+        "/auth/login",
+        data={"username": "root", "password": utils_lib_settings.ROOT_USER_PASSWORD},
+    )
+    login_json = login_response.json()
+    token = login_json["access_token"]
+
+    return {"Authorization": f"Bearer {token}"}

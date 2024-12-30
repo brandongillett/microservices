@@ -31,6 +31,7 @@ dependencies = [
     "pytest>=7.4.4",
     "aiomysql>=0.2.0",
     "faststream[rabbit]>=0.5.33",
+    "sqlalchemy-utils>=0.41.2",
 ]
 
 [tool.uv]

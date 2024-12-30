@@ -4,7 +4,7 @@ from typing import Any
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import RedisError
 
-from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.config import settings as utils_lib_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -73,4 +73,4 @@ class RedisClient:
         return self.client
 
 
-redis_client = RedisClient(redis_url=settings.REDIS_URL)
+redis_client = RedisClient(redis_url=utils_lib_settings.REDIS_URL)

@@ -18,6 +18,7 @@ async def main() -> None:
     """
     try:
         logger.info("Initializing services...")
+        await session_manager.create_database()
         await test_db_connection(session_manager)
         await test_redis_connection(redis_client)
         await test_redis_connection(redis_tokens_client)

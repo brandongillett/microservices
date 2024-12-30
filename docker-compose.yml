@@ -61,7 +61,7 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./mysql:/docker-entrypoint-initdb.d/:ro
+      # - ./mysql:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -193,6 +193,7 @@ services:
           action: rebuild
     volumes:
       - ./libs:/app/libs
+      - ./services/auth/htmlcov:/app/htmlcov
       - ./services/auth/src/alembic:/app/src/alembic
     environment:
       <<: *environment-vars
@@ -244,6 +245,7 @@ services:
           action: rebuild
     volumes:
       - ./libs:/app/libs
+      - ./services/users/htmlcov:/app/htmlcov
       - ./services/users/src/alembic:/app/src/alembic
     environment:
       <<: *environment-vars

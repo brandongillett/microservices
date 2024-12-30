@@ -4,8 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.utils_lib.tests.utils.utils import create_and_login_user
-from src.tests.utils.utils import login_root_user
+from libs.utils_lib.tests.utils.utils import create_and_login_user, login_root_user
 
 
 # User Details

@@ -2,11 +2,13 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # from sqlmodel import SQLModel
-from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.config import settings as utils_lib_settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,6 +29,45 @@ class DatabaseSessionManager:
         self.engine: AsyncEngine | None = None
         self.session_maker: async_sessionmaker[AsyncSession] | None = None
 
+    async def create_database(self) -> None:
+        database_url_without_db = f"mysql+aiomysql://{utils_lib_settings.MYSQL_USER}:{utils_lib_settings.MYSQL_PASSWORD}@{utils_lib_settings.MYSQL_SERVER}:{utils_lib_settings.MYSQL_PORT}"
+
+        # Create the engine for MySQL connection (no database specified here)
+        temp_engine = create_async_engine(
+            database_url_without_db,
+            echo=(utils_lib_settings.ENVIRONMENT == "local"),
+        )
+
+        # Connect to the MySQL server and check for the existence of the database
+        async with temp_engine.connect() as connection:
+            try:
+                # Check if the database exists by querying `information_schema.schemata`
+                result = await connection.execute(
+                    text(
+                        "SELECT SCHEMA_NAME FROM information_schema.schemata WHERE SCHEMA_NAME = :db_name"
+                    ),
+                    {"db_name": utils_lib_settings.MYSQL_DATABASE},
+                )
+
+                if not result.fetchone():
+                    # Database does not exist, create it
+                    logger.info(
+                        f"Database '{utils_lib_settings.MYSQL_DATABASE}' does not exist. Creating it..."
+                    )
+                    await connection.execute(
+                        text(f"CREATE DATABASE `{utils_lib_settings.MYSQL_DATABASE}`")
+                    )
+                    await connection.commit()
+                    logger.info(
+                        f"Database '{utils_lib_settings.MYSQL_DATABASE}' created successfully."
+                    )
+            except OperationalError as e:
+                logger.error(f"Error checking database existence: {e}")
+                raise e
+
+        # Close the connection
+        await temp_engine.dispose()
+
     async def init_db(self) -> None:
         """
         Initializes the database connection.
@@ -34,7 +75,7 @@ class DatabaseSessionManager:
         self.engine = create_async_engine(
             self.database_url,
             pool_pre_ping=True,
-            echo=(settings.ENVIRONMENT == "local"),
+            echo=(utils_lib_settings.ENVIRONMENT == "local"),
             pool_size=self.pool_size,
             max_overflow=self.max_overflow,
             pool_timeout=self.pool_timeout,
@@ -71,4 +112,4 @@ class DatabaseSessionManager:
             logger.info("Database connection closed.")
 
 
-session_manager = DatabaseSessionManager(database_url=settings.DATABASE_URL)
+session_manager = DatabaseSessionManager(database_url=utils_lib_settings.DATABASE_URL)
