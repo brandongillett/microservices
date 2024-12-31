@@ -10,6 +10,7 @@ from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
 )
+from libs.auth_lib.schemas import TokenData
 from libs.users_lib.crud import get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
@@ -17,7 +18,6 @@ from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings
 from src.api.events import create_user_event
 from src.core.security import (
-    blacklist_access_token,
     gen_token,
     get_client_ip,
     get_login_attempts,
@@ -158,8 +158,9 @@ async def login(
     access_token_expires = current_time + timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    access_token, access_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role, "token_type": "access"},
+    access_token_data = TokenData(user_id=user.id, role=user.role, type="access")
+    access_token, _ = gen_token(
+        data=access_token_data,
         expire=access_token_expires,
     )
 
@@ -167,14 +168,14 @@ async def login(
     refresh_token_expires = current_time + timedelta(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
+    refresh_token_data = TokenData(user_id=user.id, role=user.role, type="refresh")
     refresh_token, refresh_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role, "token_type": "refresh"},
+        data=refresh_token_data,
         expire=refresh_token_expires,
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
-        refresh_jti=refresh_jti,
-        access_jti=access_jti,
+        jti=refresh_jti,
         created_at=current_time,
         expires_at=refresh_token_expires,
         last_used_at=current_time,
@@ -223,7 +224,9 @@ async def logout(
         raise credential_exception
 
     # Get the user from the refresh token
-    user = await get_user_from_token(session=session, token=refresh_token)
+    user = await get_user_from_token(
+        session=session, token=refresh_token, required_type="refresh"
+    )
     if not user:
         raise credential_exception
 
@@ -234,25 +237,13 @@ async def logout(
 
     # Verify token and delete token from cookie and database
     authenticate_token = await authenticate_refresh_token(
-        session=session, user_id=user.id, refresh_jti=refresh_jti
+        session=session, user_id=user.id, jti=refresh_jti
     )
     if authenticate_token:
-        last_used_at = authenticate_token.last_used_at
-        current_time = datetime.utcnow()
-
         # Delete the refresh token from the database
         await delete_refresh_token(
             session=session, user_id=user.id, refresh_token_id=authenticate_token.id
         )
-
-        # Add Access JTI to redis blacklist if access token has not expired
-        if (current_time - last_used_at) < timedelta(
-            minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        ):
-            expiration_time = timedelta(
-                minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-            ) - (current_time - last_used_at)
-            await blacklist_access_token(authenticate_token.access_jti, expiration_time)
 
     response.delete_cookie(key="refresh_token")
 
@@ -280,9 +271,9 @@ async def refresh_access_token(
         raise credential_exception
 
     # Get the user from the refresh token
-    user = await get_user_from_token(session=session, token=refresh_token)
-    if not user:
-        raise credential_exception
+    user = await get_user_from_token(
+        session=session, token=refresh_token, required_type="refresh"
+    )
 
     # Get the JTI from the refresh token
     refresh_jti = get_token_jti(refresh_token)
@@ -291,7 +282,7 @@ async def refresh_access_token(
 
     # Verify token and delete token from database
     prev_refresh_token = await authenticate_refresh_token(
-        session=session, user_id=user.id, refresh_jti=refresh_jti
+        session=session, user_id=user.id, jti=refresh_jti
     )
     if not prev_refresh_token:
         raise HTTPException(
@@ -299,7 +290,6 @@ async def refresh_access_token(
         )
 
     current_time = datetime.utcnow()
-    prev_last_used_at = prev_refresh_token.last_used_at
     ip_address = get_client_ip(request)
 
     # Delete the previous refresh token from the database
@@ -307,21 +297,13 @@ async def refresh_access_token(
         session=session, user_id=user.id, refresh_token_id=prev_refresh_token.id
     )
 
-    # Add Access JTI to redis blacklist if access token has not expired
-    if (current_time - prev_last_used_at) < timedelta(
-        minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    ):
-        expiration_time = timedelta(
-            minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        ) - (current_time - prev_last_used_at)
-        await blacklist_access_token(prev_refresh_token.access_jti, expiration_time)
-
     # Create a new access token
     access_token_expires = current_time + timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    access_token, access_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role, "token_type": "access"},
+    access_token_data = TokenData(user_id=user.id, role=user.role, type="access")
+    access_token, _ = gen_token(
+        data=access_token_data,
         expire=access_token_expires,
     )
 
@@ -329,14 +311,14 @@ async def refresh_access_token(
     new_refresh_token_expires = current_time + timedelta(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
+    refresh_token_data = TokenData(user_id=user.id, role=user.role, type="refresh")
     new_refresh_token, new_refresh_jti = gen_token(
-        data={"sub": str(user.id), "role": user.role, "token_type": "refresh"},
+        data=refresh_token_data,
         expire=new_refresh_token_expires,
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
-        refresh_jti=new_refresh_jti,
-        access_jti=access_jti,
+        jti=new_refresh_jti,
         created_at=prev_refresh_token.created_at,
         expires_at=new_refresh_token_expires,
         last_used_at=current_time,

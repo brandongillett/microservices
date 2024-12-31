@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 import jwt
@@ -6,10 +6,6 @@ from fastapi import Depends, HTTPException, status
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
-from libs.auth_lib.core.security import (
-    get_token_jti,
-    is_access_token_blacklisted,
-)
 from libs.auth_lib.core.security import (
     security_settings as auth_lib_security_settings,
 )
@@ -29,7 +25,9 @@ credential_exception = HTTPException(
 token_dep = Annotated[str, Depends(oauth2)]
 
 
-async def get_token_data(token: str) -> TokenData:
+async def get_token_data(
+    token: str, required_type: Literal["access", "refresh"]
+) -> TokenData:
     """
     Validates an access token and optionally checks if it's blacklisted.
 
@@ -49,21 +47,20 @@ async def get_token_data(token: str) -> TokenData:
             settings.SECRET_KEY,
             algorithms=[auth_lib_security_settings.ALGORITHM],
         )
-        user_id: UUID = payload.get("sub")
-        user_role: str = payload.get("role")
+        user_id: UUID = payload.get("user_id")
+        role: str = payload.get("role")
+        type: str = payload.get("type")
 
         if not user_id:
             raise credential_exception
 
-        token_data = TokenData(user_id=user_id, role=user_role)
-
-        access_jti = get_token_jti(token)
-
-        if await is_access_token_blacklisted(access_jti):
+        if type != required_type:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Sessions does not exist",
+                detail="Invalid token type",
             )
+
+        token_data = TokenData(user_id=user_id, role=role, type=type)
 
         return token_data
 
@@ -71,7 +68,9 @@ async def get_token_data(token: str) -> TokenData:
         raise credential_exception
 
 
-async def get_user_from_token(session: async_session_dep, token: str) -> Users:
+async def get_user_from_token(
+    session: async_session_dep, token: str, required_type: Literal["access", "refresh"]
+) -> Users:
     """
     Get the user from the token.
 
@@ -82,7 +81,7 @@ async def get_user_from_token(session: async_session_dep, token: str) -> Users:
     Returns:
         Users: The user object.
     """
-    token_data = await get_token_data(token)
+    token_data = await get_token_data(token, required_type)
 
     user_id = token_data.user_id
 
@@ -114,7 +113,7 @@ async def get_current_user(session: async_session_dep, token: token_dep) -> User
         Users: The user object.
     """
 
-    return await get_user_from_token(session, token)
+    return await get_user_from_token(session, token, "access")
 
 
 async def get_current_user_token_data(token: token_dep) -> TokenData:
@@ -127,7 +126,7 @@ async def get_current_user_token_data(token: token_dep) -> TokenData:
     Returns:
         UUID: The user ID.
     """
-    return await get_token_data(token)
+    return await get_token_data(token, "access")
 
 
 current_user = Annotated[Users, Depends(get_current_user)]

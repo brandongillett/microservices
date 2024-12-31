@@ -4,7 +4,6 @@ import jwt
 from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
 
-from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings
 
 
@@ -23,22 +22,6 @@ class security_settings(BaseSettings):
 
 
 security_settings = security_settings()  # type: ignore
-
-
-# JWT token blacklist
-async def is_access_token_blacklisted(jti: UUID) -> bool:
-    """
-    Check if an access token is blacklisted.
-
-    Args:
-        jti (UUID): The JTI (unique identifier) of the access token
-
-    Returns:
-        bool: True if the token is blacklisted, False otherwise.
-    """
-    client = await redis_tokens_client.get_client()
-    result = await client.get(f"{str(jti)}_blacklisted")
-    return result is not None
 
 
 # JTI token extraction

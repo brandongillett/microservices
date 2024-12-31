@@ -21,8 +21,7 @@ async def test_get_refresh_tokens(db: AsyncSession, client: AsyncClient) -> None
         session=db,
         refresh_token_create=RefreshTokenCreate(
             user_id=new_user.id,
-            refresh_jti=uuid4(),
-            access_jti=uuid4(),
+            jti=uuid4(),
             created_at=current_time,
             expires_at=current_time - timedelta(days=1),
             last_used_at=current_time,
@@ -50,8 +49,7 @@ async def test_revoke_refresh_token(db: AsyncSession, client: AsyncClient) -> No
         session=db,
         refresh_token_create=RefreshTokenCreate(
             user_id=new_user.id,
-            refresh_jti=uuid4(),
-            access_jti=uuid4(),
+            jti=uuid4(),
             created_at=current_time,
             expires_at=current_time - timedelta(days=1),
             last_used_at=current_time,

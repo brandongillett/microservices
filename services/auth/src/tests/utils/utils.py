@@ -24,8 +24,7 @@ async def create_user_and_token_helper(db: AsyncSession) -> tuple[Users, Refresh
     time = datetime.utcnow()
     refresh_token_create = RefreshTokenCreate(
         user_id=new_user.id,
-        refresh_jti=uuid4(),
-        access_jti=uuid4(),
+        jti=uuid4(),
         created_at=time,
         expires_at=time,
         last_used_at=time,

@@ -13,7 +13,11 @@ class RabbitMQ:
     def __init__(self, url: str):
         self.url = url
         self.broker: RabbitBroker = RabbitBroker(url)
-        self.router: RabbitRouter = RabbitRouter(url)
+        self.router: RabbitRouter = RabbitRouter(
+            url,
+            schema_url=None,
+            setup_state=False,
+        )
 
     async def start(self) -> None:
         try:

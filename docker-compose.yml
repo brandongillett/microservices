@@ -9,7 +9,6 @@ x-environment-vars: &environment-vars
   MYSQL_USER: ${MYSQL_CURRENT_USER?Variable not set}
   MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD?Variable not set}
   REDIS_URL: ${REDIS_URL?Variable not set}
-  REDIS_TOKENS_URL: ${REDIS_TOKENS_URL?Variable not set}
   RABBITMQ_SERVER: ${RABBITMQ_SERVER?Variable not set}
   RABBITMQ_PORT: ${RABBITMQ_PORT?Variable not set}
   RABBITMQ_USER: ${RABBITMQ_USER?Variable not set}
@@ -61,7 +60,6 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD?Variable not set}
     volumes:
       - mysql-data:/var/lib/mysql
-      # - ./mysql:/docker-entrypoint-initdb.d/:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s

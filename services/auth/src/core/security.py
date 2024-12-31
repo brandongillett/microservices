@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
-from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
 from fastapi import Request
 from pydantic_settings import BaseSettings
 
-from libs.auth_lib.core.redis import redis_tokens_client
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
+from libs.auth_lib.schemas import TokenData
 from libs.utils_lib.core.config import settings
 from libs.utils_lib.core.redis import redis_client
 
@@ -71,30 +70,13 @@ async def reset_login_attempts(username: str) -> None:
     await client.delete(f"{username}_login_attempts")
 
 
-# JWT token blacklist
-async def blacklist_access_token(jti: UUID, expiration_time: timedelta) -> None:
-    """
-    Blacklist an access token by adding its JTI to the redis blacklist.
-
-    Args:
-        jti (UUID): The JTI (unique identifier) of the access token
-        expiration_time (timedelta): The time until the token expires
-    """
-    client = await redis_tokens_client.get_client()
-    await client.set(
-        f"{str(jti)}_blacklisted",
-        "true",
-        ex=expiration_time,
-    )
-
-
 # JWT token generation
-def gen_token(data: dict[str, Any], expire: datetime) -> tuple[str, UUID]:
+def gen_token(data: TokenData, expire: datetime) -> tuple[str, UUID]:
     """
     Generate a JWT token with the provided data and expiration time.
 
     Args:
-        data (dict[str, Any]): The data to encode in the token
+        data (TokenData): The data to encode in the token
         expire (datetime): The expiration time of the token
 
     Returns:
@@ -102,10 +84,12 @@ def gen_token(data: dict[str, Any], expire: datetime) -> tuple[str, UUID]:
     """
     jti = uuid4()
 
-    to_encode = data.copy()
+    to_encode = data.dict()
+    to_encode["user_id"] = str(data.user_id)
 
-    to_encode.update({"exp": expire})
-    to_encode.update({"jti": str(jti)})
+    to_encode["exp"] = expire
+    to_encode["jti"] = str(jti)
+
     encoded_JWT = jwt.encode(
         to_encode, settings.SECRET_KEY, algorithm=auth_lib_security_settings.ALGORITHM
     )

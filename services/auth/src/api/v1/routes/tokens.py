@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,10 +6,6 @@ from libs.auth_lib.api.deps import RoleChecker, current_user
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
-from src.api.config import api_settings
-from src.core.security import (
-    blacklist_access_token,
-)
 from src.crud import (
     delete_refresh_token,
     get_refresh_token,
@@ -72,21 +67,9 @@ async def revoke_user_refresh_token(
     if not refresh_token:
         raise HTTPException(status_code=400, detail="Refresh token not found")
 
-    last_used_at = refresh_token.last_used_at
-    current_time = datetime.utcnow()
-
     # Delete the refresh token from the database
     await delete_refresh_token(
         session=session, user_id=current_user.id, refresh_token_id=token_id
     )
-
-    # Add Access JTI to redis blacklist if access token has not expired
-    if (current_time - last_used_at) < timedelta(
-        minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-    ):
-        expiration_time = timedelta(
-            minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        ) - (current_time - last_used_at)
-        await blacklist_access_token(refresh_token.access_jti, expiration_time)
 
     return Message(message="Refresh token deleted successfully")

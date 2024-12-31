@@ -22,8 +22,7 @@ class UserCreate(SQLModel):
 
 # Refresh token schemas
 class RefreshTokenCreate(SQLModel):
-    refresh_jti: UUID
-    access_jti: UUID
+    jti: UUID
     user_id: UUID
     created_at: datetime
     expires_at: datetime

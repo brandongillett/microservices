@@ -24,7 +24,6 @@ class settings(BaseSettings):
 
     # Redis settings
     REDIS_URL: str
-    REDIS_TOKENS_URL: str
 
     # RabbitMQ settings
     RABBITMQ_SERVER: str

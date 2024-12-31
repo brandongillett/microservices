@@ -116,7 +116,7 @@ async def create_refresh_token(
 
 
 async def authenticate_refresh_token(
-    session: AsyncSession, user_id: UUID, refresh_jti: UUID
+    session: AsyncSession, user_id: UUID, jti: UUID
 ) -> RefreshTokens | None:
     """
     Authenticate a refresh token exists.
@@ -124,14 +124,14 @@ async def authenticate_refresh_token(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
-        refresh_jti (UUID): The refresh token JTI.
+        jit (UUID): The refresh token JTI.
 
     Returns:
         RefreshTokens: The authenticated refresh token or None.
     """
     session_token = await session.exec(
         select(RefreshTokens).where(
-            RefreshTokens.user_id == user_id, RefreshTokens.refresh_jti == refresh_jti
+            RefreshTokens.user_id == user_id, RefreshTokens.jti == jti
         )
     )
     return session_token.one_or_none()

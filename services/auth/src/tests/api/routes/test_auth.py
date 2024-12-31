@@ -5,7 +5,7 @@ import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.core.security import get_token_jti, is_access_token_blacklisted
+from libs.auth_lib.schemas import TokenData
 from libs.utils_lib.tests.utils.utils import (
     random_email,
     random_lower_string,
@@ -268,20 +268,14 @@ async def test_logout(db: AsyncSession, client: AsyncClient) -> None:
         "/auth/login",
         data={"username": username, "password": test_password},
     )
-    tokens = login_response.json()
     refresh_token = login_response.cookies.get("refresh_token")
     if refresh_token:
         client.cookies.set("refresh_token", refresh_token)
 
     response_logout = await client.post("/auth/logout")
 
-    access_jti = get_token_jti(tokens["access_token"])
-
     assert response_logout.status_code == 200
-    if access_jti is not None:
-        assert await is_access_token_blacklisted(access_jti)
-    else:
-        raise ValueError("access_token is missing a valid jti.")
+
     # check if refresh token cannot be used (not in db)
     refresh_access_token = await client.post("/auth/refresh-token")
     assert refresh_access_token.status_code == 401
@@ -299,8 +293,13 @@ async def test_logout_no_token(client: AsyncClient) -> None:
 async def test_logout_invalid_token(client: AsyncClient) -> None:
     client.cookies.set("refresh_token", "invalid_token")
     response_logout1 = await client.post("/auth/logout")
+    token_data = TokenData(
+        user_id=uuid4(),
+        role="user",
+        type="refresh",
+    )
     random_token, _ = gen_token(
-        data={"sub": str(uuid4())},
+        data=token_data,
         expire=datetime.utcnow()
         + timedelta(days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
@@ -344,8 +343,13 @@ async def test_refresh_token_no_token(client: AsyncClient) -> None:
 async def test_refresh_token_invalid_token(client: AsyncClient) -> None:
     client.cookies.set("refresh_token", "invalid_token")
     response_refresh1 = await client.post("/auth/refresh-token")
+    token_data = TokenData(
+        user_id=uuid4(),
+        role="user",
+        type="refresh",
+    )
     random_token, _ = gen_token(
-        data={"sub": str(uuid4())},
+        data=token_data,
         expire=datetime.utcnow()
         + timedelta(days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
@@ -363,8 +367,13 @@ async def test_refresh_token_not_in_db(db: AsyncSession, client: AsyncClient) ->
     user_data = UserCreate(username=username, email=email, password=test_password)
     user = await create_user(session=db, user_create=user_data)
 
+    token_data = TokenData(
+        user_id=user.id,
+        role="user",
+        type="refresh",
+    )
     refresh_token, _ = gen_token(
-        data={"sub": str(user.id)},
+        data=token_data,
         expire=datetime.utcnow()
         + timedelta(days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )

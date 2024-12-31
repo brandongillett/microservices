@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
-from libs.auth_lib.core.redis import redis_tokens_client
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
@@ -44,7 +43,6 @@ async def lifespan(app: FastAPI) -> Any:
     # Initialize database, Redis, and RabbitMQ connections on startup
     await session_manager.init_db()
     await redis_client.connect()
-    await redis_tokens_client.connect()
     await rabbitmq.start()
     # Create root user
     if (
@@ -60,7 +58,6 @@ async def lifespan(app: FastAPI) -> Any:
     # Close database, Redis, and RabbitMQ connections on shutdown
     await session_manager.close()
     await redis_client.close()
-    await redis_tokens_client.close()
     await rabbitmq.close()
 
 
