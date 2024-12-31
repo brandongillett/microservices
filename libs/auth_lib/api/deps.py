@@ -3,6 +3,7 @@ from uuid import UUID
 
 import jwt
 from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
@@ -14,13 +15,15 @@ from libs.users_lib.crud import get_user
 from libs.users_lib.models import Users
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.config import settings
-from src.api.deps import oauth2
+from src.api.config import api_settings
 
 credential_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials",
     headers={"WWW-Authenticate": "Bearer"},
 )
+
+oauth2 = OAuth2PasswordBearer(tokenUrl=api_settings.TOKEN_URL)
 
 token_dep = Annotated[str, Depends(oauth2)]
 

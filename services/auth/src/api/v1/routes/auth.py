@@ -4,18 +4,17 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from libs.auth_lib.api.deps import credential_exception, get_user_from_token
 from libs.auth_lib.core.security import (
-    get_token_jti,
     is_password_complex,
     is_username_complex,
 )
 from libs.auth_lib.schemas import TokenData
-from libs.users_lib.crud import get_user_by_email, get_user_by_username
+from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.security import rate_limiter
 from src.api.config import api_settings
+from src.api.deps import consumed_refresh_token
 from src.api.events import create_user_event
 from src.core.security import (
     gen_token,
@@ -26,12 +25,10 @@ from src.core.security import (
     security_settings,
 )
 from src.crud import (
-    authenticate_refresh_token,
     authenticate_user,
     create_refresh_token,
     create_user,
     delete_max_tokens,
-    delete_refresh_token,
     get_refresh_tokens,
 )
 from src.schemas import RefreshTokenCreate, Token, UserCreate
@@ -205,54 +202,34 @@ async def login(
 
 @router.post("/logout")
 async def logout(
-    response: Response, request: Request, session: async_session_dep
+    session: async_session_dep, consumed_refresh_token: consumed_refresh_token
 ) -> dict[str, str]:
     """
     Logout current user.
 
     Args:
         response (Response): The response object.
-        request (Request): The request object.
         session (AsyncSession): The database session.
+        consumed_refresh_token (Users): The consumed refresh token.
 
     Returns:
         dict: The logout message.
     """
-    # Check if user has a refresh token
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise credential_exception
-
-    # Get the user from the refresh token
-    user = await get_user_from_token(
-        session=session, token=refresh_token, required_type="refresh"
-    )
+    user = await get_user(session, user_id=consumed_refresh_token.user_id)
     if not user:
-        raise credential_exception
-
-    # Get the JTI from the refresh token
-    refresh_jti = get_token_jti(refresh_token)
-    if not refresh_jti:
-        raise credential_exception
-
-    # Verify token and delete token from cookie and database
-    authenticate_token = await authenticate_refresh_token(
-        session=session, user_id=user.id, jti=refresh_jti
-    )
-    if authenticate_token:
-        # Delete the refresh token from the database
-        await delete_refresh_token(
-            session=session, user_id=user.id, refresh_token_id=authenticate_token.id
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
-    response.delete_cookie(key="refresh_token")
 
     return {"detail": f"Logged out of {user.username}"}
 
 
 @router.post("/refresh-token")
 async def refresh_access_token(
-    response: Response, request: Request, session: async_session_dep
+    response: Response,
+    request: Request,
+    session: async_session_dep,
+    consumed_refresh_token: consumed_refresh_token,
 ) -> Token:
     """
     Refresh the access and refresh token.
@@ -261,41 +238,18 @@ async def refresh_access_token(
         response (Response): The response object.
         request (Request): The request object.
         session (AsyncSession): The database session.
+        consumed_refresh_token (Users): The consumed refresh token.
 
     Returns:
         Token: The access token.
     """
-    # Get the refresh token
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise credential_exception
-
-    # Get the user from the refresh token
-    user = await get_user_from_token(
-        session=session, token=refresh_token, required_type="refresh"
-    )
-
-    # Get the JTI from the refresh token
-    refresh_jti = get_token_jti(refresh_token)
-    if not refresh_jti:
-        raise credential_exception
-
-    # Verify token and delete token from database
-    prev_refresh_token = await authenticate_refresh_token(
-        session=session, user_id=user.id, jti=refresh_jti
-    )
-    if not prev_refresh_token:
+    user = await get_user(session, user_id=consumed_refresh_token.user_id)
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Session no longer exists"
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-
     current_time = datetime.utcnow()
     ip_address = get_client_ip(request)
-
-    # Delete the previous refresh token from the database
-    await delete_refresh_token(
-        session=session, user_id=user.id, refresh_token_id=prev_refresh_token.id
-    )
 
     # Create a new access token
     access_token_expires = current_time + timedelta(
@@ -319,7 +273,7 @@ async def refresh_access_token(
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
         jti=new_refresh_jti,
-        created_at=prev_refresh_token.created_at,
+        created_at=consumed_refresh_token.created_at,
         expires_at=new_refresh_token_expires,
         last_used_at=current_time,
         ip_address=ip_address,

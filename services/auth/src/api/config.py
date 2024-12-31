@@ -6,5 +6,7 @@ class api_settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 60
 
+    TOKEN_URL: str = "auth/login"
+
 
 api_settings = api_settings()  # type: ignore
