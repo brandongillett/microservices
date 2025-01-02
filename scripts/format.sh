@@ -42,7 +42,10 @@ done
 
 # Pre-commit
 echo -e "${YELLOW}Running pre-commit...${NC}"
-uv run --with pre-commit pre-commit run --all-files --verbose
+if ! uv run --with pre-commit pre-commit run --all-files --verbose; then
+    echo -e "${YELLOW}Running pre=commit once more...${NC}"
+    uv run --with pre-commit pre-commit run --all-files --verbose
+fi
 
 # Successful format message
 echo ""

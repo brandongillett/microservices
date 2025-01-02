@@ -48,9 +48,7 @@ async def test_authenticate_refresh_token(db: AsyncSession) -> None:
 async def test_delete_refresh_token(db: AsyncSession) -> None:
     new_user, new_token = await create_user_and_token_helper(db)
 
-    await delete_refresh_token(
-        session=db, user_id=new_user.id, refresh_token_id=new_token.id
-    )
+    await delete_refresh_token(session=db, user_id=new_user.id, token_id=new_token.id)
 
     deleted_token = await authenticate_refresh_token(
         session=db, user_id=new_user.id, jti=new_token.jti
@@ -64,7 +62,7 @@ async def test_get_refresh_token(db: AsyncSession) -> None:
     new_user, new_token = await create_user_and_token_helper(db)
 
     token = await get_refresh_token(
-        session=db, user_id=new_user.id, refresh_token_id=new_token.id
+        session=db, user_id=new_user.id, token_id=new_token.id
     )
 
     assert token

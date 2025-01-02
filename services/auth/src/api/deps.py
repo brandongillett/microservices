@@ -36,7 +36,7 @@ async def consume_refresh_token(
         )
 
     await delete_refresh_token(
-        session=session, user_id=token_data.user_id, refresh_token_id=token_obj.id
+        session=session, user_id=token_data.user_id, token_id=token_obj.id
     )
 
     response.delete_cookie("refresh_token")

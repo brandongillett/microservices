@@ -19,7 +19,7 @@ async def create_root_user(session: AsyncSession, password: str) -> Users:
 
     Args:
         session (AsyncSession): The database session.
-
+        password (str): The root user password.
     Returns:
         Users: The created root user.
     """
@@ -124,7 +124,7 @@ async def authenticate_refresh_token(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
-        jit (UUID): The refresh token JTI.
+        jti (UUID): The refresh token JTI.
 
     Returns:
         RefreshTokens: The authenticated refresh token or None.
@@ -138,7 +138,7 @@ async def authenticate_refresh_token(
 
 
 async def delete_refresh_token(
-    session: AsyncSession, user_id: UUID, refresh_token_id: UUID
+    session: AsyncSession, user_id: UUID, token_id: UUID
 ) -> None:
     """
     Delete a refresh token.
@@ -146,11 +146,11 @@ async def delete_refresh_token(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
-        refresh_token_id (UUID): The refresh token ID.
+        token_id (UUID): The refresh token ID.
     """
     session_token = await session.exec(
         select(RefreshTokens).where(
-            RefreshTokens.user_id == user_id, RefreshTokens.id == refresh_token_id
+            RefreshTokens.user_id == user_id, RefreshTokens.id == token_id
         )
     )
     token_to_delete = session_token.one_or_none()
@@ -161,7 +161,7 @@ async def delete_refresh_token(
 
 
 async def get_refresh_token(
-    session: AsyncSession, user_id: UUID, refresh_token_id: UUID
+    session: AsyncSession, user_id: UUID, token_id: UUID
 ) -> RefreshTokens | None:
     """
     Get a refresh token.
@@ -169,14 +169,14 @@ async def get_refresh_token(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
-        refresh_token_id (UUID): The refresh token ID.
+        token_id (UUID): The refresh token ID.
 
     Returns:
         RefreshTokens: The refresh token or None.
     """
     result = await session.exec(
         select(RefreshTokens).where(
-            RefreshTokens.user_id == user_id, RefreshTokens.id == refresh_token_id
+            RefreshTokens.user_id == user_id, RefreshTokens.id == token_id
         )
     )
     return result.one_or_none()

@@ -62,14 +62,14 @@ async def revoke_user_refresh_token(
     """
     # Check if the refresh token exists
     refresh_token = await get_refresh_token(
-        session=session, user_id=current_user.id, refresh_token_id=token_id
+        session=session, user_id=current_user.id, token_id=token_id
     )
     if not refresh_token:
         raise HTTPException(status_code=400, detail="Refresh token not found")
 
     # Delete the refresh token from the database
     await delete_refresh_token(
-        session=session, user_id=current_user.id, refresh_token_id=token_id
+        session=session, user_id=current_user.id, token_id=token_id
     )
 
     return Message(message="Refresh token deleted successfully")

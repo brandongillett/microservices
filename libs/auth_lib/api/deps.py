@@ -84,11 +84,11 @@ async def get_user_from_token(
     Returns:
         Users: The user object.
     """
-    token_data = await get_token_data(token, required_type)
+    token_data = await get_token_data(token=token, required_type=required_type)
 
     user_id = token_data.user_id
 
-    user = await get_user(session, user_id=user_id)
+    user = await get_user(session=session, user_id=user_id)
 
     if not user:
         raise HTTPException(
@@ -116,7 +116,9 @@ async def get_current_user(session: async_session_dep, token: token_dep) -> User
         Users: The user object.
     """
 
-    return await get_user_from_token(session, token, "access")
+    return await get_user_from_token(
+        session=session, token=token, required_type="access"
+    )
 
 
 async def get_current_user_token_data(token: token_dep) -> TokenData:
@@ -129,7 +131,7 @@ async def get_current_user_token_data(token: token_dep) -> TokenData:
     Returns:
         UUID: The user ID.
     """
-    return await get_token_data(token, "access")
+    return await get_token_data(token=token, required_type="access")
 
 
 current_user = Annotated[Users, Depends(get_current_user)]

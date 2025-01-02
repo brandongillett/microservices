@@ -15,7 +15,7 @@ from libs.utils_lib.core.redis import redis_client
 class security_settings(BaseSettings):
     # Login lockout settings
     MAX_FAILED_LOGIN_ATTEMPTS: int = 5
-    LOCKOUT_DURATION: timedelta = timedelta(minutes=10)
+    LOCKOUT_DURATION_MINUTES: int = 15
 
 
 security_settings = security_settings()  # type: ignore
@@ -39,7 +39,7 @@ async def increment_login_attempts(username: str) -> int:
     await client.set(
         f"{username}_login_attempts",
         current_attempts,
-        ex=security_settings.LOCKOUT_DURATION,
+        ex=timedelta(minutes=security_settings.LOCKOUT_DURATION_MINUTES).seconds,
     )
     return current_attempts
 
@@ -96,7 +96,7 @@ def gen_token(data: TokenData, expire: datetime) -> tuple[str, UUID]:
     return encoded_JWT, jti
 
 
-# Client IP and location
+# Client IP
 def get_client_ip(request: Request) -> str:
     """
     Get the client's IP address from the request.

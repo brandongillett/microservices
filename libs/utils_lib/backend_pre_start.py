@@ -23,6 +23,9 @@ wait_seconds = 1
 async def test_db_connection(session_manager: DatabaseSessionManager) -> None:
     """
     Tests the database connection by executing a simple query.
+
+    Args:
+        session_manager (DatabaseSessionManager): The database session manager instance.
     """
     try:
         await session_manager.init_db()

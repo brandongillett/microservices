@@ -11,14 +11,14 @@ from libs.auth_lib.core.security import (
 from libs.auth_lib.schemas import TokenData
 from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
-from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.api.deps import async_session_dep, client_ip_dep
 from libs.utils_lib.core.security import rate_limiter
+from libs.utils_lib.schemas import Message
 from src.api.config import api_settings
 from src.api.deps import consumed_refresh_token
 from src.api.events import create_user_event
 from src.core.security import (
     gen_token,
-    get_client_ip,
     get_login_attempts,
     increment_login_attempts,
     reset_login_attempts,
@@ -94,6 +94,7 @@ async def register(
 async def login(
     response: Response,
     request: Request,
+    ip_address: client_ip_dep,
     session: async_session_dep,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
@@ -103,12 +104,15 @@ async def login(
     Args:
         response (Response): The response object.
         request (Request): The request object.
+        ip_address (str): The client IP address.
         session (AsyncSession): The database session.
         form_data (OAuth2PasswordRequestForm): The form data.
 
     Returns:
         Token: The access token.
     """
+    _ = request  # Unused variable (mandatory for rate limiter)
+
     # Check if user has exceeded the maximum number of failed login attempts
     if (
         await get_login_attempts(form_data.username)
@@ -149,7 +153,6 @@ async def login(
     await reset_login_attempts(form_data.username)
 
     current_time = datetime.utcnow()
-    ip_address = get_client_ip(request)
 
     # Generate access token
     access_token_expires = current_time + timedelta(
@@ -200,17 +203,16 @@ async def login(
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=Message)
 async def logout(
     session: async_session_dep, consumed_refresh_token: consumed_refresh_token
-) -> dict[str, str]:
+) -> Message:
     """
     Logout current user.
 
     Args:
-        response (Response): The response object.
         session (AsyncSession): The database session.
-        consumed_refresh_token (Users): The consumed refresh token.
+        consumed_refresh_token (RefreshToken): The consumed refresh token.
 
     Returns:
         dict: The logout message.
@@ -221,13 +223,13 @@ async def logout(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
-    return {"detail": f"Logged out of {user.username}"}
+    return Message(message=f"Logged out of {user.username}")
 
 
 @router.post("/refresh-token")
 async def refresh_access_token(
     response: Response,
-    request: Request,
+    ip_address: client_ip_dep,
     session: async_session_dep,
     consumed_refresh_token: consumed_refresh_token,
 ) -> Token:
@@ -236,9 +238,9 @@ async def refresh_access_token(
 
     Args:
         response (Response): The response object.
-        request (Request): The request object.
+        ip_address (str): The client IP address.
         session (AsyncSession): The database session.
-        consumed_refresh_token (Users): The consumed refresh token.
+        consumed_refresh_token (RefreshToken): The consumed refresh token.
 
     Returns:
         Token: The access token.
@@ -249,7 +251,6 @@ async def refresh_access_token(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     current_time = datetime.utcnow()
-    ip_address = get_client_ip(request)
 
     # Create a new access token
     access_token_expires = current_time + timedelta(
@@ -262,19 +263,19 @@ async def refresh_access_token(
     )
 
     # Create a new refresh token and store JTI in database
-    new_refresh_token_expires = current_time + timedelta(
+    refresh_token_expires = current_time + timedelta(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     refresh_token_data = TokenData(user_id=user.id, role=user.role, type="refresh")
-    new_refresh_token, new_refresh_jti = gen_token(
+    refresh_token, refresh_jti = gen_token(
         data=refresh_token_data,
-        expire=new_refresh_token_expires,
+        expire=refresh_token_expires,
     )
     refresh_token_create = RefreshTokenCreate(
         user_id=user.id,
-        jti=new_refresh_jti,
+        jti=refresh_jti,
         created_at=consumed_refresh_token.created_at,
-        expires_at=new_refresh_token_expires,
+        expires_at=refresh_token_expires,
         last_used_at=current_time,
         ip_address=ip_address,
     )
@@ -285,7 +286,7 @@ async def refresh_access_token(
     # Set refresh token in cookie
     response.set_cookie(
         key="refresh_token",
-        value=new_refresh_token,
+        value=refresh_token,
         httponly=True,
         secure=True,
         samesite="lax",
