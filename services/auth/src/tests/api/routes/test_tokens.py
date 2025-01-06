@@ -29,7 +29,7 @@ async def test_get_refresh_tokens(db: AsyncSession, client: AsyncClient) -> None
         ),
     )
 
-    tokens_response = await client.get("/tokens", headers=headers)
+    tokens_response = await client.get("/tokens/me", headers=headers)
     tokens = [
         refresh_token["id"]
         for refresh_token in tokens_response.json()["refresh_tokens"]
@@ -57,7 +57,7 @@ async def test_revoke_refresh_token(db: AsyncSession, client: AsyncClient) -> No
         ),
     )
 
-    tokens_response = await client.get("/tokens", headers=headers)
+    tokens_response = await client.get("/tokens/me", headers=headers)
     tokens = [
         refresh_token["id"]
         for refresh_token in tokens_response.json()["refresh_tokens"]
@@ -67,10 +67,10 @@ async def test_revoke_refresh_token(db: AsyncSession, client: AsyncClient) -> No
     assert str(token.id) in tokens
 
     revoke_response = await client.delete(
-        f"/tokens/{token.id}",
+        f"/tokens/me/{token.id}",
         headers=headers,
     )
-    tokens_response = await client.get("/tokens", headers=headers)
+    tokens_response = await client.get("/tokens/me", headers=headers)
     tokens = [
         refresh_token["id"]
         for refresh_token in tokens_response.json()["refresh_tokens"]
@@ -87,7 +87,7 @@ async def test_revoke_refresh_token_invalid_token(
     headers, _ = await create_and_login_user_helper(db, client)
 
     revoke_response = await client.delete(
-        f"/tokens/{uuid4()}",
+        f"/tokens/me/{uuid4()}",
         headers=headers,
     )
 

@@ -226,7 +226,7 @@ async def logout(
     return Message(message=f"Logged out of {user.username}")
 
 
-@router.post("/refresh-token")
+@router.post("/token/refresh", response_model=Token)
 async def refresh_access_token(
     response: Response,
     ip_address: client_ip_dep,

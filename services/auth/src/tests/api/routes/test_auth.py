@@ -277,7 +277,7 @@ async def test_logout(db: AsyncSession, client: AsyncClient) -> None:
     assert response_logout.status_code == 200
 
     # check if refresh token cannot be used (not in db)
-    refresh_access_token = await client.post("/auth/refresh-token")
+    refresh_access_token = await client.post("/auth/token/refresh")
     assert refresh_access_token.status_code == 401
 
 
@@ -325,7 +325,7 @@ async def test_refresh_token(db: AsyncSession, client: AsyncClient) -> None:
     if refresh_token:
         client.cookies.set("refresh_token", refresh_token)
 
-    response_refresh = await client.post("/auth/refresh-token")
+    response_refresh = await client.post("/auth/token/refresh")
 
     assert response_refresh.status_code == 200
     assert response_refresh.json()["access_token"]
@@ -334,7 +334,7 @@ async def test_refresh_token(db: AsyncSession, client: AsyncClient) -> None:
 @pytest.mark.anyio
 async def test_refresh_token_no_token(client: AsyncClient) -> None:
     client.cookies.set("refresh_token", "")
-    response_refresh = await client.post("/auth/refresh-token")
+    response_refresh = await client.post("/auth/token/refresh")
 
     assert response_refresh.status_code == 401
 
@@ -342,7 +342,7 @@ async def test_refresh_token_no_token(client: AsyncClient) -> None:
 @pytest.mark.anyio
 async def test_refresh_token_invalid_token(client: AsyncClient) -> None:
     client.cookies.set("refresh_token", "invalid_token")
-    response_refresh1 = await client.post("/auth/refresh-token")
+    response_refresh1 = await client.post("/auth/token/refresh")
     token_data = TokenData(
         user_id=uuid4(),
         role="user",
@@ -354,7 +354,7 @@ async def test_refresh_token_invalid_token(client: AsyncClient) -> None:
         + timedelta(days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
     client.cookies.set("refresh_token", random_token)
-    response_refresh2 = await client.post("/auth/refresh-token")
+    response_refresh2 = await client.post("/auth/token/refresh")
 
     assert response_refresh1.status_code == 401
     assert response_refresh2.status_code == 401
@@ -380,6 +380,6 @@ async def test_refresh_token_not_in_db(db: AsyncSession, client: AsyncClient) ->
 
     client.cookies.set("refresh_token", refresh_token)
 
-    response_refresh = await client.post("/auth/refresh-token")
+    response_refresh = await client.post("/auth/token/refresh")
 
     assert response_refresh.status_code == 401

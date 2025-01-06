@@ -12,7 +12,9 @@ logger = logging.getLogger(__name__)
 class RabbitMQ:
     def __init__(self, url: str):
         self.url = url
+        # Broker used to publish events
         self.broker: RabbitBroker = RabbitBroker(url)
+        # Router used to subscribe to events
         self.router: RabbitRouter = RabbitRouter(
             url,
             schema_url=None,

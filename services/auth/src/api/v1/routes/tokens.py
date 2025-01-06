@@ -21,7 +21,7 @@ all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
 
 
 @router.get(
-    "",
+    "/me",
     response_model=RefreshTokensPublic,
     dependencies=[Depends(all_roles)],
 )
@@ -40,7 +40,7 @@ async def get_user_refresh_tokens(
 
 
 @router.delete(
-    "/{token_id}",
+    "/me/{token_id}",
     response_model=Message,
     dependencies=[Depends(all_roles)],
 )
