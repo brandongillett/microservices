@@ -84,8 +84,7 @@ def gen_token(data: TokenData, expire: datetime) -> tuple[str, UUID]:
     """
     jti = uuid4()
 
-    to_encode = data.model_dump()
-    to_encode["user_id"] = str(data.user_id)
+    to_encode = data.model_dump(mode="json")
 
     to_encode["exp"] = expire
     to_encode["jti"] = str(jti)
