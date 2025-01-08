@@ -15,5 +15,4 @@ class UpdatePassword(SQLModel):
 
 # Management schemas
 class UpdateUserRole(SQLModel):
-    user_id: UUID
-    role: str
+    new_role: str

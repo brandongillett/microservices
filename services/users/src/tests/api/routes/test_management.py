@@ -39,8 +39,8 @@ async def test_update_role(
 
     _, new_user = await create_and_login_user_helper(db, auth_client)
 
-    update_data = {"user_id": new_user.id, "role": "admin"}
-    response = await client.patch("/management/role", headers=headers, json=update_data)
+    update_data = {"new_role": "admin"}
+    response = await client.patch(f"/management/users/{new_user.id}/role", headers=headers, json=update_data)
 
     assert response.status_code == 200
 
@@ -53,8 +53,8 @@ async def test_update_role_invalid_role(
 
     _, new_user = await create_and_login_user_helper(db, auth_client)
 
-    update_data = {"user_id": new_user.id, "role": "invalid"}
-    response = await client.patch("/management/role", headers=headers, json=update_data)
+    update_data = {"new_role": "invalid"}
+    response = await client.patch(f"/management/users/{new_user.id}/role", headers=headers, json=update_data)
 
     assert response.status_code == 400
 
@@ -65,7 +65,7 @@ async def test_update_role_invalid_user(
 ) -> None:
     headers = await login_root_user_helper(auth_client)
 
-    update_data = {"user_id": str(uuid4()), "role": "admin"}
-    response = await client.patch("/management/role", headers=headers, json=update_data)
+    update_data = {"new_role": "admin"}
+    response = await client.patch(f"/management/users/{str(uuid4())}/role", headers=headers, json=update_data)
 
     assert response.status_code == 404
