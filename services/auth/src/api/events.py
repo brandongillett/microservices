@@ -23,7 +23,7 @@ rabbit_router = RabbitRouter()
 
 
 # Subscriber events
-@rabbit_router.subscriber("update_user_username", retry=True)
+@rabbit_router.subscriber("update_user_username")
 async def update_user_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
 ) -> None:
@@ -69,7 +69,7 @@ async def update_user_username_event(
     )
 
 
-@rabbit_router.subscriber("update_user_password", retry=True)
+@rabbit_router.subscriber("update_user_password")
 async def update_user_password_event(
     session: async_session_dep, data: UpdateUserPasswordEvent
 ) -> None:
@@ -114,7 +114,7 @@ async def update_user_password_event(
     )
 
 
-@rabbit_router.subscriber("update_user_role", retry=True)
+@rabbit_router.subscriber("update_user_role")
 async def update_user_role_event(
     session: async_session_dep, data: UpdateUserRoleEvent
 ) -> None:

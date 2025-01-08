@@ -22,7 +22,7 @@ rabbit_router = RabbitRouter()
 
 
 # Subscriber events
-@rabbit_router.subscriber("create_root_user", retry=10)
+@rabbit_router.subscriber("create_root_user")
 async def create_root_user_event(session: async_session_dep, user: Users) -> None:
     """
     Subscribes to an event to create a user.
@@ -41,7 +41,7 @@ async def create_root_user_event(session: async_session_dep, user: Users) -> Non
         logger.info("Root user created.")
 
 
-@rabbit_router.subscriber("create_user", retry=10)
+@rabbit_router.subscriber("create_user")
 async def create_user_event(session: async_session_dep, data: CreateUserEvent) -> None:
     """
     Subscribes to an event to create a user.

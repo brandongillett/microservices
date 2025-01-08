@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.crud import create_inbox_event, create_outbox_event, get_inbox_event
+from libs.utils_lib.models import ProcessedState
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,21 +56,14 @@ async def handle_subscriber_event(
         event.retries += 1
         await session.commit()
 
-        if event.retries > event_settings.MAX_RETRIES:
-            logger.warning(f"Event {event_id} reached maximum retries. Abandoning.")
-            event.error_message = "Event reached maximum retries."
-            await session.commit()
-            return
-
     try:
         await process_fn(session, data)
-        event.processed = True
+        event.processed = ProcessedState.processed
         event.processed_at = datetime.utcnow()
         await session.commit()
     except Exception as e:
         logger.error(f"Error processing event {event_id}: {str(e)}")
         event.error_message = str(e)
-        # await session.rollback()
         await session.commit()
 
 
@@ -93,8 +87,8 @@ async def handle_publish_event(
 
     try:
         await rabbitmq.broker.publish(event_schema, queue=event_type)
-        event.published = True
-        event.published_at = datetime.utcnow()
+        event.processed = ProcessedState.processed
+        event.processed_at = datetime.utcnow()
         await session.commit()
     except Exception as e:
         logger.error(f"Error publishing event: {event_id}")
