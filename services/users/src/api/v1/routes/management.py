@@ -1,15 +1,15 @@
 from typing import Any
 from uuid import UUID
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from libs.auth_lib.api.deps import RoleChecker
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
-from libs.utils_lib.api.deps import async_session_dep
+from libs.users_lib.crud import get_user_by_email, get_user_by_username
+from libs.users_lib.models import Users
 from libs.users_lib.schemas import UserPublic
+from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
-from libs.users_lib.crud import get_user_by_username, get_user_by_email
 from src.api.events import update_user_role_event
 from src.crud import update_user_role
 from src.schemas import UpdateUserRole
@@ -18,16 +18,21 @@ router = APIRouter()
 
 management_roles = RoleChecker(allowed_roles=["admin", "root"])
 
-@router.get("/users", response_model=UserPublic, dependencies=[Depends(management_roles)])
-async def get_user_data(session: async_session_dep, email: Optional[str] = None, username: Optional[str] = None) -> UserPublic:
+
+@router.get(
+    "/users", response_model=UserPublic, dependencies=[Depends(management_roles)]
+)
+async def get_user_data(
+    session: async_session_dep, email: str | None = None, username: str | None = None
+) -> Users:
     """
     Get the user data.
-    
+
     Args:
         session (AsyncSession): The database session.
         email (Optional[str]): The user email.
         username (Optional[str]): The user username.
-        
+
     Returns:
         UserPublic: The user data.
     """
@@ -40,7 +45,7 @@ async def get_user_data(session: async_session_dep, email: Optional[str] = None,
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     return user
 
 
@@ -55,8 +60,14 @@ async def get_roles() -> Any:
     return auth_lib_security_settings.roles
 
 
-@router.patch("/users/{user_id}/role", dependencies=[Depends(management_roles)], response_model=Message)
-async def update_role(session: async_session_dep, user_id: UUID, body: UpdateUserRole) -> Message:
+@router.patch(
+    "/users/{user_id}/role",
+    dependencies=[Depends(management_roles)],
+    response_model=Message,
+)
+async def update_role(
+    session: async_session_dep, user_id: UUID, body: UpdateUserRole
+) -> Message:
     """
     Update the user role.
 
