@@ -4,23 +4,78 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from faststream.rabbit.fastapi import RabbitRouter
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.rabbitmq import rabbitmq
-from libs.utils_lib.crud import create_inbox_event, create_outbox_event, get_inbox_event
+from libs.utils_lib.crud import (
+    create_inbox_event,
+    create_outbox_event,
+    get_inbox_event,
+    get_outbox_event,
+)
 from libs.utils_lib.models import ProcessedState
+from libs.utils_lib.schemas import AcknowledgementEvent
+from src.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-class event_settings(BaseSettings):
-    MAX_RETRIES: int = 20
+rabbit_router = RabbitRouter()
 
 
-event_settings = event_settings()
+@rabbit_router.subscriber(f"{settings.SERVICE_NAME}_acknowledgements")
+async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> None:
+    """
+    Subscribes to an event to handle acknowledgements.
+
+    Args:
+        session: The database session.
+        acknowledgement: The acknowledgement event.
+    """
+    event = await get_outbox_event(session, ack.event_id)
+
+    if not event:
+        logger.error(f"Error processing acknowledgement: {ack.event_id}")
+        return
+
+    event.processed = ack.processed
+
+    if ack.processed == ProcessedState.processed:
+        event.processed_at = ack.processed_at
+    elif ack.processed == ProcessedState.failed:
+        event.error_message = ack.error_message
+
+    await session.commit()
+
+
+async def send_ack(
+    event_id: UUID,
+    service: str,
+    processed_state: ProcessedState,
+    processed_at: datetime | None = None,
+    error_message: str | None = None,
+) -> None:
+    """
+    Sends an acknowledgement to the event publisher.
+
+    Args:
+        event_id: The unique identifier of the event.
+        service: The service that processed the event.
+        processed_state: The state of the event processing.
+        processed_at: The timestamp when the event was processed.
+    """
+    await rabbitmq.broker.publish(
+        AcknowledgementEvent(
+            event_id=event_id,
+            processed=processed_state,
+            processed_at=processed_at,
+            error_message=error_message,
+        ),
+        queue=f"{service}_acknowledgements",
+    )
 
 
 async def handle_subscriber_event(
@@ -29,7 +84,7 @@ async def handle_subscriber_event(
     event_type: str,
     process_fn: Callable,
     data: Any,
-):
+) -> None:
     """
     Handles common logic for processing events, including retries, error handling, and event creation.
 
@@ -39,14 +94,29 @@ async def handle_subscriber_event(
         event_type: Type of the event.
         process_fn: The function to process the event.
         data: The event data payload.
-
-    Returns:
-        None
     """
-    event = await get_inbox_event(session, event_id)
+    # Try to get the event from the inbox
+    try:
+        event = await get_inbox_event(session, event_id)
+    except Exception as e:
+        # Log the error and send a failed acknowledgement to the publisher
+        logger.error(f"Error processing event: {event_id}")
+        await send_ack(
+            event_id=event_id,
+            service=data.service,
+            processed_state=ProcessedState.failed,
+            error_message=f"Error processing event: {str(e)}",
+        )
+        return
 
-    if event and event.processed:
-        logger.info(f"Event {event_id} already processed.")
+    # If the event has already been processed, send an acknowledgement to the publisher
+    if event and event.processed == ProcessedState.processed:
+        await send_ack(
+            event_id=event_id,
+            service=data.service,
+            processed_state=ProcessedState.processed,
+            processed_at=event.processed_at,
+        )
         return
 
     if not event:
@@ -61,10 +131,23 @@ async def handle_subscriber_event(
         event.processed = ProcessedState.processed
         event.processed_at = datetime.utcnow()
         await session.commit()
+        await send_ack(
+            event_id=event_id,
+            service=data.service,
+            processed_state=ProcessedState.processed,
+            processed_at=event.processed_at,
+        )
     except Exception as e:
-        logger.error(f"Error processing event {event_id}: {str(e)}")
-        event.error_message = str(e)
+        logger.error(f"Error processing event: {event_id}")
+        event.processed = ProcessedState.failed
+        event.error_message = f"Error processing event: {str(e)}"
         await session.commit()
+        await send_ack(
+            event_id=event_id,
+            service=data.service,
+            processed_state=ProcessedState.failed,
+            error_message=f"Error processing event: {str(e)}",
+        )
 
 
 async def handle_publish_event(
@@ -86,11 +169,10 @@ async def handle_publish_event(
     )
 
     try:
-        await rabbitmq.broker.publish(event_schema, queue=event_type)
-        event.processed = ProcessedState.processed
-        event.processed_at = datetime.utcnow()
+        await rabbitmq.broker.publish(event_schema, queue=event_type, persist=True)
         await session.commit()
     except Exception as e:
         logger.error(f"Error publishing event: {event_id}")
-        event.error_message = str(e)
+        event.processed = ProcessedState.failed
+        event.error_message = f"Error publishing event: {str(e)}"
         await session.commit()

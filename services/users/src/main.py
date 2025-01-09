@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
+from libs.utils_lib.api import events as utils_lib_events
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
@@ -13,10 +14,11 @@ from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 from src.api import events
 from src.api.v1.main import api_router as v1_router
+from src.core.config import settings
 
 
 class app_settings(BaseSettings):
-    TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [Users]"
+    TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [{settings.SERVICE_NAME}]"
     DESCRIPTION: str = """
     A REST API service for user management.
 
@@ -57,6 +59,7 @@ app = FastAPI(
 
 # Include rabbitmq router
 rabbitmq.router.include_router(events.rabbit_router)
+rabbitmq.router.include_router(utils_lib_events.rabbit_router)  # acknowledgements
 app.include_router(rabbitmq.router)
 
 # Set all CORS enabled origins

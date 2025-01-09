@@ -1,5 +1,6 @@
 from uuid import uuid4
 
+from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,7 +24,7 @@ rabbit_router = RabbitRouter()
 
 
 # Subscriber events
-@rabbit_router.subscriber("update_user_username")
+@rabbit_router.subscriber(RabbitQueue(name="update_user_username", durable=True))
 async def update_user_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
 ) -> None:
@@ -69,7 +70,7 @@ async def update_user_username_event(
     )
 
 
-@rabbit_router.subscriber("update_user_password")
+@rabbit_router.subscriber(RabbitQueue(name="update_user_password", durable=True))
 async def update_user_password_event(
     session: async_session_dep, data: UpdateUserPasswordEvent
 ) -> None:
@@ -114,7 +115,7 @@ async def update_user_password_event(
     )
 
 
-@rabbit_router.subscriber("update_user_role")
+@rabbit_router.subscriber(RabbitQueue(name="update_user_role", durable=True))
 async def update_user_role_event(
     session: async_session_dep, data: UpdateUserRoleEvent
 ) -> None:

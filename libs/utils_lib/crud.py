@@ -62,3 +62,19 @@ async def create_outbox_event(
     session.add(event_outbox)
     await session.commit()
     return event_outbox
+
+
+async def get_outbox_event(session: AsyncSession, event_id: UUID) -> EventOutbox | None:
+    """
+    Get an event outbox record by ID.
+
+    Args:
+        session (AsyncSession): The database session.
+        event_id (UUID): The event ID.
+
+    Returns:
+        EventOutbox: The event outbox record or None.
+    """
+    stmt = select(EventOutbox).where(EventOutbox.id == event_id)
+    result = await session.exec(stmt)
+    return result.one_or_none()

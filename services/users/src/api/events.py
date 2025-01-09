@@ -1,5 +1,6 @@
 from uuid import UUID, uuid4
 
+from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -41,7 +42,7 @@ async def create_root_user_event(session: async_session_dep, user: Users) -> Non
         logger.info("Root user created.")
 
 
-@rabbit_router.subscriber("create_user")
+@rabbit_router.subscriber(RabbitQueue(name="create_user", durable=True))
 async def create_user_event(session: async_session_dep, data: CreateUserEvent) -> None:
     """
     Subscribes to an event to create a user.

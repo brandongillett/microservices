@@ -1,8 +1,7 @@
 from uuid import UUID
 
-from pydantic import BaseModel
-
 from libs.users_lib.models import UserBase, Users
+from libs.utils_lib.schemas import EventBase
 
 
 # User schemas
@@ -11,24 +10,20 @@ class UserPublic(UserBase):
 
 
 # Event schemas
-class CreateUserEvent(BaseModel):
+class CreateUserEvent(EventBase):
     user: Users
-    event_id: UUID
 
 
-class UpdateUserUsernameEvent(BaseModel):
-    event_id: UUID
+class UpdateUserUsernameEvent(EventBase):
     user_id: UUID
     new_username: str
 
 
-class UpdateUserPasswordEvent(BaseModel):
-    event_id: UUID
+class UpdateUserPasswordEvent(EventBase):
     user_id: UUID
     new_password: str
 
 
-class UpdateUserRoleEvent(BaseModel):
-    event_id: UUID
+class UpdateUserRoleEvent(EventBase):
     user_id: UUID
     new_role: str
