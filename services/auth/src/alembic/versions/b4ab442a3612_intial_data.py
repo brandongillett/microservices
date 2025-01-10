@@ -1,7 +1,7 @@
 """intial data
 
 Revision ID: b4ab442a3612
-Revises: 
+Revises:
 Create Date: 2025-01-09 17:33:35.556178
 
 """

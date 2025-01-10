@@ -80,10 +80,10 @@ async def register(
     user.username = user.username.lower()
     user.email = user.email.lower()
 
-    try:
-        # Create the user
-        new_user = await create_user(session, user_create=user, commit=False)
+    # Create the user
+    new_user = await create_user(session, user_create=user, commit=False)
 
+    try:
         # Publish the user to the broker
         await create_user_event(session=session, user=new_user)
     except Exception:

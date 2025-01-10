@@ -74,13 +74,14 @@ async def update_role(
     Returns:
         bool: True
     """
-
     if body.new_role not in auth_lib_security_settings.roles:
         raise HTTPException(status_code=400, detail="Invalid role")
 
-    try:
-        user = await update_user_role(session=session, user_id=user_id, role=body.new_role, commit=False)
+    user = await update_user_role(
+        session=session, user_id=user_id, role=body.new_role, commit=False
+    )
 
+    try:
         await update_user_role_event(
             session=session, user_id=user_id, new_role=body.new_role
         )
@@ -88,7 +89,7 @@ async def update_role(
         await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update password",
+            detail="Failed to update user role",
         )
 
     await session.commit()

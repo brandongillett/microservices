@@ -108,7 +108,7 @@ async def handle_subscriber_event(
         event = await get_inbox_event(session, event_id)
     except Exception as e:
         # Log the error and send a failed acknowledgement to the publisher
-        log = "Error fetching event: {event_id} - {str(e)}"
+        log = f"Error fetching event: {event_id} - {str(e)}"
 
         logger.error(log)
 
@@ -169,6 +169,7 @@ async def handle_subscriber_event(
         processed_at=processed_at,
         error_message=error_message,
     )
+
 
 async def handle_publish_event(
     session: AsyncSession, event_type: str, event_schema: BaseModel

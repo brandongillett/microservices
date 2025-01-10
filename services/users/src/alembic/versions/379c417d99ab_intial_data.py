@@ -1,7 +1,7 @@
 """intial data
 
 Revision ID: 379c417d99ab
-Revises: 
+Revises:
 Create Date: 2025-01-09 17:33:56.174571
 
 """
