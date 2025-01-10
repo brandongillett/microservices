@@ -52,5 +52,5 @@ async def get_user_by_email(session: AsyncSession, email: str) -> Users | None:
         Users: The user object or None.
     """
     stmt = select(Users).where(Users.email == email)
-    result = await session.exec(stmt)  # Execute the statement
-    return result.one_or_none()  # Return the single user or None
+    result = await session.exec(stmt)
+    return result.one_or_none()

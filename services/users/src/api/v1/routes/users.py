@@ -80,15 +80,26 @@ async def update_username(
     # Convert the new username to lowercase
     body.new_username = body.new_username.lower()
 
-    # Update the user username
-    await update_user_username(
-        session=session, user_id=current_user.id, new_username=body.new_username
-    )
+    try:
 
-    # Publish the new username to the broker
-    await update_user_username_event(
-        session=session, user_id=current_user.id, new_username=body.new_username
-    )
+        # Update the user username
+        user = await update_user_username(
+            session=session, user_id=current_user.id, new_username=body.new_username, commit=False
+        )
+
+        # Publish the new username to the event broker
+        await update_user_username_event(
+            session=session, user_id=current_user.id, new_username=user.username
+        )
+    except Exception:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update username",
+        )
+
+    await session.commit()
+    await session.refresh(user)
 
     return Message(message=f"Username updated to {body.new_username}")
 
@@ -130,14 +141,24 @@ async def update_password(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=password_complexity
         )
 
-    # Update the user password
-    user = await update_user_password(
-        session=session, user_id=current_user.id, new_password=body.new_password
-    )
+    try:
+        # Update the user password
+        user = await update_user_password(
+            session=session, user_id=current_user.id, new_password=body.new_password, commit=False
+        )
 
-    # Publish the new password to the broker
-    await update_user_password_event(
-        session=session, user_id=user.id, new_password=user.password
-    )
+        # Publish the new password to the event broker
+        await update_user_password_event(
+            session=session, user_id=user.id, new_password=user.password
+        )
+    except Exception:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update password",
+        )
+    
+    await session.commit()
+    await session.refresh(user)
 
     return Message(message="Password updated successfully")

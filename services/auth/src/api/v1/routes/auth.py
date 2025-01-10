@@ -80,12 +80,24 @@ async def register(
     user.username = user.username.lower()
     user.email = user.email.lower()
 
-    new_user = await create_user(session, user_create=user)
+    try:
+        # Create the user
+        new_user = await create_user(session, user_create=user, commit=False)
 
-    # Publish the user to the broker
-    await create_user_event(session=session, user=new_user)
+        # Publish the user to the broker
+        await create_user_event(session=session, user=new_user)
+    except Exception:
+        # Rollback the transaction if the event fails
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user {new_user.username}",
+        )
 
-    # Create the user
+    await session.commit()
+    await session.refresh(new_user)
+
+    # Return the user data
     return new_user
 
 

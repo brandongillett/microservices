@@ -8,7 +8,11 @@ from libs.utils_lib.models import EventInbox, EventOutbox
 
 # CRUD operations for EventInbox
 async def create_inbox_event(
-    session: AsyncSession, event_id: UUID, event_type: str, data: dict
+    session: AsyncSession,
+    event_id: UUID,
+    event_type: str,
+    data: dict,
+    commit: bool = True,
 ) -> EventInbox:
     """
     Create an event inbox record.
@@ -23,7 +27,11 @@ async def create_inbox_event(
     """
     event_inbox = EventInbox(id=event_id, event_type=event_type, data=data)
     session.add(event_inbox)
-    await session.commit()
+
+    if commit:
+        await session.commit()
+        await session.refresh(event_inbox)
+
     return event_inbox
 
 
@@ -45,7 +53,11 @@ async def get_inbox_event(session: AsyncSession, event_id: UUID) -> EventInbox |
 
 # CRUD operations for EventOutbox
 async def create_outbox_event(
-    session: AsyncSession, event_id: UUID, event_type: str, data: dict
+    session: AsyncSession,
+    event_id: UUID,
+    event_type: str,
+    data: dict,
+    commit: bool = True,
 ) -> EventOutbox:
     """
     Create an event outbox record.
@@ -60,7 +72,11 @@ async def create_outbox_event(
     """
     event_outbox = EventOutbox(id=event_id, event_type=event_type, data=data)
     session.add(event_outbox)
-    await session.commit()
+
+    if commit:
+        await session.commit()
+        await session.refresh(event_outbox)
+
     return event_outbox
 
 

@@ -14,19 +14,9 @@ class ProcessedState(Enum):
 
 
 # Base models
-class EventInboxBase(SQLModel):
+class EventBase(SQLModel):
     event_type: str = Field(max_length=255)
-    data: dict = Field(default={}, sa_column=Column(JSON))
-    processed: ProcessedState = Field(default=ProcessedState.pending)
-    retries: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    processed_at: datetime | None = None
-    error_message: str | None = None
-
-
-class EventOutboxBase(SQLModel):
-    event_type: str = Field(max_length=255)
-    data: dict = Field(default={}, sa_column=Column(JSON))
+    data: dict = Field(default={})
     processed: ProcessedState = Field(default=ProcessedState.pending)
     retries: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -35,9 +25,11 @@ class EventOutboxBase(SQLModel):
 
 
 # Database models
-class EventInbox(EventInboxBase, table=True):
+class EventInbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
+    data: dict = Field(default={}, sa_column=Column(JSON))
 
 
-class EventOutbox(EventOutboxBase, table=True):
+class EventOutbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
+    data: dict = Field(default={}, sa_column=Column(JSON))

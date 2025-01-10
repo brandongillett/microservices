@@ -35,10 +35,18 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
         session: The database session.
         acknowledgement: The acknowledgement event.
     """
-    event = await get_outbox_event(session, ack.event_id)
+    try:
+        event = await get_outbox_event(session, ack.event_id)
+    except Exception as e:
+        logger.error(f"Error fetching event: {ack.event_id}: {str(e)}")
+        return
 
     if not event:
-        logger.error(f"Error processing acknowledgement: {ack.event_id}")
+        logger.error(f"Event not found for acknowledgement: {ack.event_id}")
+        return
+
+    if event.processed == ProcessedState.processed:
+        logger.info(f"Acknowledgement already processed for event: {ack.event_id}")
         return
 
     event.processed = ack.processed
@@ -100,13 +108,17 @@ async def handle_subscriber_event(
         event = await get_inbox_event(session, event_id)
     except Exception as e:
         # Log the error and send a failed acknowledgement to the publisher
-        logger.error(f"Error processing event: {event_id}")
+        log = "Error fetching event: {event_id} - {str(e)}"
+
+        logger.error(log)
+
         await send_ack(
             event_id=event_id,
             service=data.service,
             processed_state=ProcessedState.failed,
-            error_message=f"Error processing event: {str(e)}",
+            error_message=log,
         )
+
         return
 
     # If the event has already been processed, send an acknowledgement to the publisher
@@ -124,31 +136,39 @@ async def handle_subscriber_event(
         event = await create_inbox_event(session, event_id, event_type, data_json)
     else:
         event.retries += 1
-        await session.commit()
+
+    processed_state = ProcessedState.pending
+    processed_at = None
+    error_message = None
 
     try:
         await process_fn(session, data)
+
         event.processed = ProcessedState.processed
         event.processed_at = datetime.utcnow()
-        await session.commit()
-        await send_ack(
-            event_id=event_id,
-            service=data.service,
-            processed_state=ProcessedState.processed,
-            processed_at=event.processed_at,
-        )
-    except Exception as e:
-        logger.error(f"Error processing event: {event_id}")
-        event.processed = ProcessedState.failed
-        event.error_message = f"Error processing event: {str(e)}"
-        await session.commit()
-        await send_ack(
-            event_id=event_id,
-            service=data.service,
-            processed_state=ProcessedState.failed,
-            error_message=f"Error processing event: {str(e)}",
-        )
 
+        processed_state = ProcessedState.processed
+        processed_at = event.processed_at
+    except Exception as e:
+        log = f"Error processing event: {event_id} - {str(e)}"
+
+        logger.error(log)
+
+        event.processed = ProcessedState.failed
+        event.error_message = log
+
+        processed_state = ProcessedState.failed
+        error_message = log
+
+    await session.commit()
+
+    await send_ack(
+        event_id=event_id,
+        service=data.service,
+        processed_state=processed_state,
+        processed_at=processed_at,
+        error_message=error_message,
+    )
 
 async def handle_publish_event(
     session: AsyncSession, event_type: str, event_schema: BaseModel
@@ -170,9 +190,12 @@ async def handle_publish_event(
 
     try:
         await rabbitmq.broker.publish(event_schema, queue=event_type, persist=True)
-        await session.commit()
     except Exception as e:
-        logger.error(f"Error publishing event: {event_id}")
+        log = f"Error publishing event: {event_id} - {str(e)}"
+
+        logger.error(log)
+
         event.processed = ProcessedState.failed
-        event.error_message = f"Error publishing event: {str(e)}"
+        event.error_message = log
+
         await session.commit()

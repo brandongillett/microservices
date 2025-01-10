@@ -13,7 +13,9 @@ from src.schemas import RefreshTokenCreate, UserCreate
 
 
 # CRUD operations for Users
-async def create_root_user(session: AsyncSession, password: str) -> Users:
+async def create_root_user(
+    session: AsyncSession, password: str, commit: bool = True
+) -> Users:
     """
     Create the root user.
 
@@ -38,13 +40,17 @@ async def create_root_user(session: AsyncSession, password: str) -> Users:
         update={"password": get_password_hash(user_create.password), "role": "root"},
     )
     session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
+
+    if commit:
+        await session.commit()
+        await session.refresh(dbObj)
 
     return dbObj
 
 
-async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
+async def create_user(
+    session: AsyncSession, user_create: UserCreate, commit: bool = True
+) -> Users:
     """
     Create a new user.
 
@@ -60,8 +66,10 @@ async def create_user(session: AsyncSession, user_create: UserCreate) -> Users:
     )
 
     session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
+
+    if commit:
+        await session.commit()
+        await session.refresh(dbObj)
 
     return dbObj
 
@@ -95,7 +103,7 @@ async def authenticate_user(
 
 # CRUD operations for RefreshTokens
 async def create_refresh_token(
-    session: AsyncSession, refresh_token_create: RefreshTokenCreate
+    session: AsyncSession, refresh_token_create: RefreshTokenCreate, commit: bool = True
 ) -> RefreshTokens:
     """
     Create a new refresh token.
@@ -110,8 +118,11 @@ async def create_refresh_token(
     dbObj = RefreshTokens.model_validate(refresh_token_create)
 
     session.add(dbObj)
-    await session.commit()
-    await session.refresh(dbObj)
+
+    if commit:
+        await session.commit()
+        await session.refresh(dbObj)
+
     return dbObj
 
 
@@ -138,7 +149,7 @@ async def authenticate_refresh_token(
 
 
 async def delete_refresh_token(
-    session: AsyncSession, user_id: UUID, token_id: UUID
+    session: AsyncSession, user_id: UUID, token_id: UUID, commit: bool = True
 ) -> None:
     """
     Delete a refresh token.
@@ -157,7 +168,9 @@ async def delete_refresh_token(
 
     if token_to_delete:
         await session.delete(token_to_delete)
-        await session.commit()
+
+        if commit:
+            await session.commit()
 
 
 async def get_refresh_token(
@@ -201,7 +214,9 @@ async def get_refresh_tokens(
     return list(result.all())
 
 
-async def delete_expired_tokens(session: AsyncSession, user_id: UUID) -> None:
+async def delete_expired_tokens(
+    session: AsyncSession, user_id: UUID, commit: bool = True
+) -> None:
     """
     Delete expired refresh tokens.
 
@@ -221,10 +236,13 @@ async def delete_expired_tokens(session: AsyncSession, user_id: UUID) -> None:
     for token in expired_tokens:
         await session.delete(token)
 
-    await session.commit()
+    if commit:
+        await session.commit()
 
 
-async def delete_max_tokens(session: AsyncSession, user_id: UUID) -> None:
+async def delete_max_tokens(
+    session: AsyncSession, user_id: UUID, commit: bool = True
+) -> None:
     """
     Delete the oldest refresh tokens if the user has more than the maximum allowed.
 
@@ -245,4 +263,5 @@ async def delete_max_tokens(session: AsyncSession, user_id: UUID) -> None:
             await session.delete(session_tokens[0])
             session_tokens.pop(0)
 
-        await session.commit()
+        if commit:
+            await session.commit()

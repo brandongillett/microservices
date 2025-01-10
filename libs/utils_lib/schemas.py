@@ -8,13 +8,13 @@ from src.core.config import settings
 
 
 # Base models
-class EventBase(SQLModel):
+class EventMessageBase(SQLModel):
     event_id: UUID
     service: str = Field(default=settings.SERVICE_NAME)
 
 
 # Event acknowledgement model
-class AcknowledgementEvent(EventBase):
+class AcknowledgementEvent(EventMessageBase):
     processed: ProcessedState
     processed_at: datetime | None = None
     error_message: str | None = None

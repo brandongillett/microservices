@@ -10,7 +10,7 @@ from libs.users_lib.models import Users
 
 # CRUD operations for Users
 async def update_user_username(
-    session: AsyncSession, user_id: UUID, new_username: str
+    session: AsyncSession, user_id: UUID, new_username: str, commit: bool = True
 ) -> Users:
     """
     Update the user username.
@@ -32,13 +32,16 @@ async def update_user_username(
 
     user.username = new_username
     session.add(user)
-    await session.commit()
-    await session.refresh(user)
+
+    if commit:
+        await session.commit()
+        await session.refresh(user)
+
     return user
 
 
 async def update_user_password(
-    session: AsyncSession, user_id: UUID, new_password: str
+    session: AsyncSession, user_id: UUID, new_password: str, commit: bool = True
 ) -> Users:
     """
     Update the user password.
@@ -60,12 +63,17 @@ async def update_user_password(
 
     user.password = get_password_hash(new_password)
     session.add(user)
-    await session.commit()
-    await session.refresh(user)
+
+    if commit:
+        await session.commit()
+        await session.refresh(user)
+
     return user
 
 
-async def update_user_role(session: AsyncSession, user_id: UUID, role: str) -> Users:
+async def update_user_role(
+    session: AsyncSession, user_id: UUID, role: str, commit: bool = True
+) -> Users:
     """
     Update the user role.
 
@@ -86,6 +94,9 @@ async def update_user_role(session: AsyncSession, user_id: UUID, role: str) -> U
 
     user.role = role
     session.add(user)
-    await session.commit()
-    await session.refresh(user)
+
+    if commit:
+        await session.commit()
+        await session.refresh(user)
+
     return user
