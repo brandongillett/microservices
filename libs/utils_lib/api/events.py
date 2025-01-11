@@ -150,6 +150,8 @@ async def handle_subscriber_event(
         processed_state = ProcessedState.processed
         processed_at = event.processed_at
     except Exception as e:
+        await session.rollback()
+
         log = f"Error processing event: {event_id} - {str(e)}"
 
         logger.error(log)

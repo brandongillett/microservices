@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field, SQLModel
 
 
@@ -21,15 +21,16 @@ class EventBase(SQLModel):
     retries: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     processed_at: datetime | None = None
-    error_message: str | None = None
 
 
 # Database models
 class EventInbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
     data: dict = Field(default={}, sa_column=Column(JSON))
+    error_message: str | None = Field(default=None, sa_column=Column(Text))
 
 
 class EventOutbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
     data: dict = Field(default={}, sa_column=Column(JSON))
+    error_message: str | None = Field(default=None, sa_column=Column(Text))

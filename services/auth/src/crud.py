@@ -22,6 +22,8 @@ async def create_root_user(
     Args:
         session (AsyncSession): The database session.
         password (str): The root user password.
+        commit (bool): Commit at the end of the operation.
+
     Returns:
         Users: The created root user.
     """
@@ -57,6 +59,7 @@ async def create_user(
     Args:
         session (AsyncSession): The database session.
         user_create (UserCreate): The user create request body.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         Users: The created user.
@@ -111,6 +114,7 @@ async def create_refresh_token(
     Args:
         session (AsyncSession): The database session.
         refresh_token_create (RefreshTokenCreate): The refresh token create request body.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         RefreshTokens: The created refresh token.
@@ -158,6 +162,7 @@ async def delete_refresh_token(
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
         token_id (UUID): The refresh token ID.
+        commit (bool): Commit at the end of the operation.
     """
     session_token = await session.exec(
         select(RefreshTokens).where(
@@ -223,6 +228,7 @@ async def delete_expired_tokens(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
+        commit (bool): Commit at the end of the operation.
     """
     result = await session.exec(
         select(RefreshTokens).where(
@@ -249,6 +255,7 @@ async def delete_max_tokens(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
+        commit (bool): Commit at the end of the operation.
     """
     await delete_expired_tokens(session, user_id)
 

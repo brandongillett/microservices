@@ -1,8 +1,8 @@
-"""intial data
+"""initial data
 
-Revision ID: 379c417d99ab
-Revises:
-Create Date: 2025-01-09 17:33:56.174571
+Revision ID: cde51a9bdbab
+Revises: 
+Create Date: 2025-01-10 23:16:12.628083
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = '379c417d99ab'
+revision: str = 'cde51a9bdbab'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,9 +27,9 @@ def upgrade() -> None:
     sa.Column('retries', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('processed_at', sa.DateTime(), nullable=True),
-    sa.Column('error_message', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('data', sa.JSON(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('eventoutbox',
@@ -38,9 +38,9 @@ def upgrade() -> None:
     sa.Column('retries', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('processed_at', sa.DateTime(), nullable=True),
-    sa.Column('error_message', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('data', sa.JSON(), nullable=True),
+    sa.Column('error_message', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',

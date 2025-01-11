@@ -19,6 +19,7 @@ async def update_user_username(
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
         new_username (str): The new username.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         Users: The updated user.
@@ -50,6 +51,7 @@ async def update_user_password(
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
         new_password (str): The new password.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         Users: The updated user.
@@ -81,6 +83,7 @@ async def update_user_role(
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
         new_role (str): The new role.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         Users: The updated user.

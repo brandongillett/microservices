@@ -21,6 +21,7 @@ async def create_inbox_event(
         session (AsyncSession): The database session.
         event_type (str): The event type.
         data (Json): The event data.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         EventInbox: The event inbox record.
@@ -66,6 +67,7 @@ async def create_outbox_event(
         session (AsyncSession): The database session.
         event_type (str): The event type.
         data (Json): The event data.
+        commit (bool): Commit at the end of the operation.
 
     Returns:
         EventOutbox: The event outbox record.
