@@ -4,10 +4,10 @@ from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.auth_lib.schemas import CreateUserEvent
 from libs.users_lib.crud import get_user_by_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
-    CreateUserEvent,
     UpdateUserPasswordEvent,
     UpdateUserRoleEvent,
     UpdateUserUsernameEvent,
@@ -18,6 +18,7 @@ from libs.utils_lib.api.events import (
     handle_subscriber_event,
     logger,
 )
+from libs.utils_lib.models import EventOutbox
 
 rabbit_router = RabbitRouter()
 
@@ -80,53 +81,68 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
 # Publisher events
 async def update_user_username_event(
     session: AsyncSession, user_id: UUID, new_username: str
-) -> None:
+) -> EventOutbox:
     """
     Publishes an event to update a user's username.
 
     Args:
         user_id (UUID): The user's ID.
         new_username (str): The new username.
+
+    Returns:
+        EventOutbox: The event outbox record.
     """
     event_schema = UpdateUserUsernameEvent(
         event_id=uuid4(), user_id=user_id, new_username=new_username
     )
-    await handle_publish_event(
+    event = await handle_publish_event(
         session=session, event_type="update_user_username", event_schema=event_schema
     )
+
+    return event
 
 
 async def update_user_password_event(
     session: AsyncSession, user_id: UUID, new_password: str
-) -> None:
+) -> EventOutbox:
     """
     Publishes a event to update a user's password.
 
     Args:
         user_id (UUID): The user's ID.
         new_password (str): The new password.
+
+    Returns:
+        EventOutbox: The event outbox record.
     """
     event_schema = UpdateUserPasswordEvent(
         event_id=uuid4(), user_id=user_id, new_password=new_password
     )
-    await handle_publish_event(
+    event = await handle_publish_event(
         session=session, event_type="update_user_password", event_schema=event_schema
     )
+
+    return event
 
 
 async def update_user_role_event(
     session: AsyncSession, user_id: UUID, new_role: str
-) -> None:
+) -> EventOutbox:
     """
     Publishes an event to update a user's role.
 
     Args:
         user_id (UUID): The user's ID.
         new_role (str): The new role.
+
+    Returns:
+        EventOutbox: The event outbox record.
     """
     event_schema = UpdateUserRoleEvent(
         event_id=uuid4(), user_id=user_id, new_role=new_role
     )
-    await handle_publish_event(
+    event = await handle_publish_event(
         session=session, event_type="update_user_role", event_schema=event_schema
     )
+
+    return event

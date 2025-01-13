@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from libs.users_lib.models import UserBase, Users
+from libs.users_lib.models import UserBase
 from libs.utils_lib.schemas import EventMessageBase
 
 
@@ -10,10 +10,6 @@ class UserPublic(UserBase):
 
 
 # Event schemas
-class CreateUserEvent(EventMessageBase):
-    user: Users
-
-
 class UpdateUserUsernameEvent(EventMessageBase):
     user_id: UUID
     new_username: str

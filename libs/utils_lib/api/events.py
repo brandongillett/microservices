@@ -16,7 +16,7 @@ from libs.utils_lib.crud import (
     get_inbox_event,
     get_outbox_event,
 )
-from libs.utils_lib.models import ProcessedState
+from libs.utils_lib.models import EventOutbox, ProcessedState
 from libs.utils_lib.schemas import AcknowledgementEvent
 from src.core.config import settings
 
@@ -175,7 +175,7 @@ async def handle_subscriber_event(
 
 async def handle_publish_event(
     session: AsyncSession, event_type: str, event_schema: BaseModel
-) -> None:
+) -> EventOutbox:
     """
     Handles the publishing of events to RabbitMQ.
 
@@ -183,6 +183,9 @@ async def handle_publish_event(
         session: The database session.
         event_type: The type of the event.
         event_schema: The event schema containing event data.
+
+    Returns:
+        EventOutbox: The event outbox record.
     """
     event_id = event_schema.event_id
     event_data = event_schema.model_dump(mode="json")
@@ -202,3 +205,5 @@ async def handle_publish_event(
         event.error_message = log
 
         await session.commit()
+
+    return event

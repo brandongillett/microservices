@@ -4,10 +4,10 @@ from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.auth_lib.schemas import CreateUserEvent
 from libs.users_lib.crud import get_user
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
-    CreateUserEvent,
     UpdateUserPasswordEvent,
     UpdateUserRoleEvent,
     UpdateUserUsernameEvent,
@@ -19,6 +19,7 @@ from libs.utils_lib.api.events import (
     logger,
 )
 from libs.utils_lib.core.rabbitmq import rabbitmq
+from libs.utils_lib.models import EventOutbox
 
 rabbit_router = RabbitRouter()
 
@@ -171,15 +172,20 @@ async def create_root_user_event(user: Users) -> None:
     await rabbitmq.broker.publish(user, queue="create_root_user")
 
 
-async def create_user_event(session: AsyncSession, user: Users) -> None:
+async def create_user_event(session: AsyncSession, user: Users) -> EventOutbox:
     """
     Publishes an event to create a user
 
     Args:
         user (User): The user to create.
+
+    Returns:
+        EventOutbox: The event outbox record.
     """
     event_schema = CreateUserEvent(event_id=uuid4(), user=user)
 
-    await handle_publish_event(
+    event = await handle_publish_event(
         session=session, event_type="create_user", event_schema=event_schema
     )
+
+    return event

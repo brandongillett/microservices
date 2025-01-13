@@ -1,7 +1,7 @@
 """initial data
 
 Revision ID: d2c7d563eb59
-Revises: 
+Revises:
 Create Date: 2025-01-10 23:14:27.705031
 
 """
