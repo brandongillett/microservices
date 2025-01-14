@@ -1,7 +1,8 @@
 from uuid import uuid4
 
-from faststream.rabbit import RabbitQueue
+from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
+from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.schemas import CreateUserEvent
@@ -18,10 +19,42 @@ from libs.utils_lib.api.events import (
     handle_subscriber_event,
     logger,
 )
+from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.rabbitmq import rabbitmq
-from libs.utils_lib.models import EventOutbox
+from libs.utils_lib.models import EventInbox, EventOutbox
+from src.models import RefreshTokens
 
 rabbit_router = RabbitRouter()
+
+
+# Exchanges
+@rabbit_router.subscriber(
+    RabbitQueue(name="cleanup_database_auth", durable=True),
+    RabbitExchange("cleanup_database", type=ExchangeType.FANOUT),
+)
+async def cleanup_database_event(session: async_session_dep) -> None:
+    """
+    Subscribes to an event to clean up the database.
+
+    Args:
+        session: The database session.
+    """
+    if utils_lib_settings.ENVIRONMENT == "production":
+        logger.error("Cannot clean up database in production.")
+        return
+    if (
+        utils_lib_settings.ENVIRONMENT == "local"
+        or utils_lib_settings.ENVIRONMENT == "staging"
+    ):
+        statement = delete(RefreshTokens)
+        await session.execute(statement)
+        statement = delete(Users).where(not_(Users.username == "root"))
+        await session.execute(statement)
+        statement = delete(EventOutbox)
+        await session.execute(statement)
+        statement = delete(EventInbox)
+        await session.execute(statement)
+        await session.commit()
 
 
 # Subscriber events
