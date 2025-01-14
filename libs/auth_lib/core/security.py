@@ -1,10 +1,12 @@
 from uuid import UUID
 
 import jwt
+from fastapi import HTTPException, status
+from itsdangerous import URLSafeTimedSerializer
 from passlib.context import CryptContext
 from pydantic_settings import BaseSettings
 
-from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.config import settings as utils_libs_settings
 
 
 # Security Settings
@@ -19,6 +21,9 @@ class security_settings(BaseSettings):
     USERNAME_MAX_LENGTH: int = 22
     PASSWORD_MIN_LENGTH: int = 8
     PASSWORD_MAX_LENGTH: int = 40
+
+    # Email verification token expiration time
+    EMAIL_VERIFICATION_EXPIRES_MINUTES: int = 30
 
 
 security_settings = security_settings()  # type: ignore
@@ -37,12 +42,58 @@ def get_token_jti(token: str) -> UUID | None:
     """
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security_settings.ALGORITHM]
+            token,
+            utils_libs_settings.SECRET_KEY,
+            algorithms=[security_settings.ALGORITHM],
         )
         jti = payload.get("jti")
         return UUID(jti)
     except jwt.PyJWTError:
         return None
+
+
+# URL safe token generation and verification
+def gen_url_token(data: dict, salt: str) -> str:
+    """
+    Generate a URL-safe token with the provided data and salt.
+
+    Args:
+        data (dict): The data to encode in the token
+        salt (str): The salt to use for encoding
+
+    Returns:
+        str: The URL-safe token.
+    """
+    serializer = URLSafeTimedSerializer(
+        secret_key=utils_libs_settings.SECRET_KEY, salt=salt
+    )
+
+    return serializer.dumps(data)
+
+
+def verify_url_token(token: str, salt: str, expiration: int) -> dict:
+    """
+    Verify a URL-safe token and extract the data.
+
+    Args:
+        token (str): The token to verify
+        salt (str): The salt to use for verification
+        expiration (int): The maximum age of the token in minutes
+
+    Returns:
+        dict: The data extracted from the token. If the token is invalid or expired, an HTTPException is raised.
+    """
+    serializer = URLSafeTimedSerializer(
+        secret_key=utils_libs_settings.SECRET_KEY, salt=salt
+    )
+
+    try:
+        data = serializer.loads(token, max_age=expiration * 60)
+        return data
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
 
 
 # Password hashing

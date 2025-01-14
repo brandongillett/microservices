@@ -19,6 +19,7 @@ class UserBase(SQLModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     role: str = Field(default="user")
     disabled: bool = False
+    verified: bool = False
 
 
 # Database models

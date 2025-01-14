@@ -39,7 +39,11 @@ async def create_root_user(
 
     dbObj = Users.model_validate(
         user_create,
-        update={"password": get_password_hash(user_create.password), "role": "root"},
+        update={
+            "password": get_password_hash(user_create.password),
+            "role": "root",
+            "verified": True,
+        },
     )
     session.add(dbObj)
 
