@@ -1,12 +1,12 @@
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.schemas import CreateUserEvent
-from libs.users_lib.crud import get_user
+from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEmailEvent
+from libs.users_lib.crud import get_user, update_user_role, update_user_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
     UpdateUserPasswordEvent,
@@ -42,10 +42,8 @@ async def cleanup_database_event(session: async_session_dep) -> None:
     if utils_lib_settings.ENVIRONMENT == "production":
         logger.error("Cannot clean up database in production.")
         return
-    if (
-        utils_lib_settings.ENVIRONMENT == "local"
-        or utils_lib_settings.ENVIRONMENT == "staging"
-    ):
+
+    if utils_lib_settings.ENVIRONMENT in ["local", "staging"]:
         statement = delete(RefreshTokens)
         await session.execute(statement)
         statement = delete(Users).where(not_(Users.username == "root"))
@@ -84,16 +82,7 @@ async def update_user_username_event(
         Returns:
             None
         """
-        user = await get_user(session, data.user_id)
-
-        if not user:
-            logger.error(f"User {data.user_id} not found.")
-            raise ValueError(f"User {data.user_id} not found.")
-
-        user.username = data.new_username
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        await update_user_username(session, data.user_id, data.new_username)
 
     await handle_subscriber_event(
         session=session,
@@ -132,7 +121,6 @@ async def update_user_password_event(
         user = await get_user(session, data.user_id)
 
         if not user:
-            logger.error(f"User {data.user_id} not found.")
             raise ValueError(f"User {data.user_id} not found.")
 
         user.password = data.new_password
@@ -174,16 +162,7 @@ async def update_user_role_event(
         Returns:
             None
         """
-        user = await get_user(session, data.user_id)
-
-        if not user:
-            logger.error(f"User {data.user_id} not found.")
-            raise ValueError(f"User {data.user_id} not found.")
-
-        user.role = data.new_role
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+        await update_user_role(session, data.user_id, data.new_role)
 
     await handle_subscriber_event(
         session=session,
@@ -219,6 +198,25 @@ async def create_user_event(session: AsyncSession, user: Users) -> EventOutbox:
 
     event = await handle_publish_event(
         session=session, event_type="create_user", event_schema=event_schema
+    )
+
+    return event
+
+
+async def verify_user_email_event(session: AsyncSession, user_id: UUID) -> EventOutbox:
+    """
+    Publishes an event to create a user
+
+    Args:
+        user_id (UUID): The user ID.
+
+    Returns:
+        EventOutbox: The event outbox record.
+    """
+    event_schema = VerifyUserEmailEvent(event_id=uuid4(), user_id=user_id)
+
+    event = await handle_publish_event(
+        session=session, event_type="verify_user_email", event_schema=event_schema
     )
 
     return event

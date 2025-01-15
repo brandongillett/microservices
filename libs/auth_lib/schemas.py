@@ -17,3 +17,7 @@ class TokenData(SQLModel):
 # Event schemas
 class CreateUserEvent(EventMessageBase):
     user: Users
+
+
+class VerifyUserEmailEvent(EventMessageBase):
+    user_id: UUID

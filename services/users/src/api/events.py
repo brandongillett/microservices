@@ -5,7 +5,8 @@ from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.schemas import CreateUserEvent
+from libs.auth_lib.crud import verify_user_email
+from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEmailEvent
 from libs.users_lib.crud import get_user_by_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
@@ -40,10 +41,7 @@ async def cleanup_database_event(session: async_session_dep) -> None:
     if utils_lib_settings.ENVIRONMENT == "production":
         logger.error("Cannot clean up database in production.")
         return
-    if (
-        utils_lib_settings.ENVIRONMENT == "local"
-        or utils_lib_settings.ENVIRONMENT == "staging"
-    ):
+    if utils_lib_settings.ENVIRONMENT in ["local", "staging"]:
         statement = delete(Users).where(not_(Users.username == "root"))
         await session.execute(statement)
         statement = delete(EventOutbox)
@@ -104,6 +102,42 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
         event_id=data.event_id,
         event_type="create_user",
         process_fn=process_create_user,
+        data=data,
+    )
+
+
+@rabbit_router.subscriber(RabbitQueue(name="verify_user_email", durable=True))
+async def verify_user_email_event(
+    session: async_session_dep, data: VerifyUserEmailEvent
+) -> None:
+    """
+    Subscribes to an event to to verify a user's email.
+
+    Args:
+        session: The database session.
+        user (User): The user to create.
+    """
+
+    async def process_verify_user_email_event(
+        session: AsyncSession, data: VerifyUserEmailEvent
+    ) -> None:
+        """
+        Processes the logic for verifying a user's email.
+
+        Args:
+            session: The database session.
+            data: The event containing the user details to be created.
+
+        Returns:
+            None
+        """
+        await verify_user_email(session, data.user_id)
+
+    await handle_subscriber_event(
+        session=session,
+        event_id=data.event_id,
+        event_type="verify_user_email",
+        process_fn=process_verify_user_email_event,
         data=data,
     )
 

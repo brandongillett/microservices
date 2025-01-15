@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,7 +8,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
+    verify_url_token,
 )
+from libs.auth_lib.core.security import (
+    security_settings as auth_lib_security_settings,
+)
+from libs.auth_lib.crud import verify_user_email
 from libs.auth_lib.schemas import TokenData
 from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
@@ -16,7 +22,7 @@ from libs.utils_lib.core.security import rate_limiter
 from libs.utils_lib.schemas import Message
 from src.api.config import api_settings
 from src.api.deps import consumed_refresh_token
-from src.api.events import create_user_event
+from src.api.events import create_user_event, verify_user_email_event
 from src.core.security import (
     gen_token,
     get_login_attempts,
@@ -306,3 +312,61 @@ async def refresh_access_token(
     )
 
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.get("/verify/{token}", response_model=Message)
+async def verify_email(session: async_session_dep, token: str) -> Message:
+    """
+    Verify email address.
+
+    Args:
+        session (AsyncSession): The database session.
+        token (str): The verification token.
+
+    Returns:
+        dict: The verification message.
+    """
+    token_data = verify_url_token(
+        token=token,
+        salt="email_verification",
+        expiration=auth_lib_security_settings.EMAIL_VERIFICATION_EXPIRES_MINUTES,
+    )
+
+    user_id = UUID(token_data.get("user_id"))
+
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
+        )
+
+    user = await get_user(session, user_id=user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if user.verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified"
+        )
+
+    verified_user = await verify_user_email(
+        session=session, user_id=user_id, commit=False
+    )
+
+    try:
+        # Publish the user to the broker
+        await verify_user_email_event(session=session, user_id=user_id)
+    except Exception:
+        # Rollback the transaction if the event fails
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to verify email",
+        )
+
+    await session.commit()
+    await session.refresh(verified_user)
+
+    return Message(message="Email verified")
