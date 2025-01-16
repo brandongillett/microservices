@@ -1,7 +1,7 @@
 """initial data
 
 Revision ID: 595d5cc1a50c
-Revises: 
+Revises:
 Create Date: 2025-01-16 23:33:07.261107
 
 """

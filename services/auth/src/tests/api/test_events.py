@@ -1,5 +1,3 @@
-import time
-
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -13,6 +11,7 @@ from libs.utils_lib.tests.utils.utils import (
     test_password,
 )
 from src.api.events import create_user_event, verify_user_email_event
+
 
 @pytest.mark.anyio
 async def test_create_user_event(db: AsyncSession) -> None:

@@ -1,6 +1,3 @@
-import time
-from uuid import uuid4
-
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -64,4 +61,3 @@ async def test_update_user_role_event(
     processed = await event_processed_helper(event.id)
 
     assert processed
-
