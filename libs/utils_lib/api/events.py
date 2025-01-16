@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -26,7 +27,9 @@ logger = logging.getLogger(__name__)
 rabbit_router = RabbitRouter()
 
 
-@rabbit_router.subscriber(f"{settings.SERVICE_NAME}_acknowledgements")
+@rabbit_router.subscriber(
+    RabbitQueue(name=f"{settings.SERVICE_NAME}_acknowledgements", durable=True)
+)
 async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> None:
     """
     Subscribes to an event to handle acknowledgements.
