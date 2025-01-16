@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
-from libs.utils_lib.models import ProcessedState
+from libs.utils_lib.models import EventStatus
 from src.core.config import settings
 
 
@@ -15,7 +15,7 @@ class EventMessageBase(SQLModel):
 
 # Event acknowledgement model
 class AcknowledgementEvent(EventMessageBase):
-    processed: ProcessedState
+    status: EventStatus
     processed_at: datetime | None = None
     error_message: str | None = None
 

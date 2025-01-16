@@ -1,9 +1,13 @@
 import random
 import string
+import time
 
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.crud import get_outbox_event
+from libs.utils_lib.models import EventStatus
 from libs.users_lib.models import Users
 from libs.utils_lib.core.config import settings as utils_lib_settings
 
@@ -62,3 +66,30 @@ async def login_root_user_helper(auth_client: AsyncClient) -> dict[str, str]:
     token = login_json["access_token"]
 
     return {"Authorization": f"Bearer {token}"}
+
+
+async def event_processed_helper(event_id, timeout=1, poll_interval=0.1):
+    """
+    Polls the outbox event to check if it has been processed.
+
+    Args:
+        event_id (int): The event ID.
+        timeout (int, optional): The timeout in seconds. Defaults to 1.
+        poll_interval (float, optional): The poll interval in seconds. Defaults to 0.1.
+
+    Returns:
+        bool: True if the event has been processed, False otherwise.
+    """
+
+    start_time = time.time()
+    
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+
+        async with session_manager.get_session() as new_session:
+            outbox_event = await get_outbox_event(session=new_session, event_id=event_id)
+        
+        if outbox_event.status == EventStatus.processed:
+            return True
+
+    return False
