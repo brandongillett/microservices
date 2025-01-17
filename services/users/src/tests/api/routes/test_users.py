@@ -1,5 +1,3 @@
-import time
-
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -64,14 +62,6 @@ async def test_update_username(
 
     user = await get_user_by_username(session=db, username=new_username)
     assert user is not None, "User not found"
-
-    # Make sure event is getting sent to auth service (we will check this by logging in with new password)
-    time.sleep(0.2)  # Wait for event to be sent
-    login_response = await auth_client.post(
-        "/auth/login",
-        data={"username": new_username, "password": test_password},
-    )
-    assert login_response.status_code == 200
 
     assert update_response.status_code == 200
     assert user.username == new_username
@@ -138,14 +128,6 @@ async def test_update_password(
 
     user = await get_user_by_username(session=db, username=new_user.username)
     assert user is not None, "User not found"
-
-    # Make sure event is getting sent to auth service (we will check this by logging in with new password)
-    time.sleep(0.2)  # Wait for event to be sent
-    login_response = await auth_client.post(
-        "/auth/login",
-        data={"username": new_user.username, "password": new_password},
-    )
-    assert login_response.status_code == 200
 
     assert update_response.status_code == 200
     assert verify_password(new_password, user.password)

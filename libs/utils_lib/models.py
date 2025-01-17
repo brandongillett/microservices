@@ -6,8 +6,8 @@ from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field, SQLModel
 
 
-# Processed state enum
-class ProcessedState(Enum):
+# Event Status Enum
+class EventStatus(Enum):
     pending = "pending"
     processed = "processed"
     failed = "failed"
@@ -17,7 +17,7 @@ class ProcessedState(Enum):
 class EventBase(SQLModel):
     event_type: str = Field(max_length=255)
     data: dict = Field(default={})
-    processed: ProcessedState = Field(default=ProcessedState.pending)
+    status: EventStatus = Field(default=EventStatus.pending)
     retries: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     processed_at: datetime | None = None

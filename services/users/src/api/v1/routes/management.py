@@ -5,13 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from libs.auth_lib.api.deps import RoleChecker
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
-from libs.users_lib.crud import get_user_by_email, get_user_by_username
+from libs.users_lib.crud import (
+    get_user_by_email,
+    get_user_by_username,
+    update_user_role,
+)
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
 from src.api.events import update_user_role_event
-from src.crud import update_user_role
 from src.schemas import UpdateUserRole
 
 router = APIRouter()

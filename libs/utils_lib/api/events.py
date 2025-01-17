@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from faststream.rabbit import RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -16,7 +17,7 @@ from libs.utils_lib.crud import (
     get_inbox_event,
     get_outbox_event,
 )
-from libs.utils_lib.models import EventOutbox, ProcessedState
+from libs.utils_lib.models import EventOutbox, EventStatus
 from libs.utils_lib.schemas import AcknowledgementEvent
 from src.core.config import settings
 
@@ -26,7 +27,9 @@ logger = logging.getLogger(__name__)
 rabbit_router = RabbitRouter()
 
 
-@rabbit_router.subscriber(f"{settings.SERVICE_NAME}_acknowledgements")
+@rabbit_router.subscriber(
+    RabbitQueue(name=f"{settings.SERVICE_NAME}_acknowledgements", durable=True)
+)
 async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> None:
     """
     Subscribes to an event to handle acknowledgements.
@@ -45,15 +48,15 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
         logger.error(f"Event not found for acknowledgement: {ack.event_id}")
         return
 
-    if event.processed == ProcessedState.processed:
+    if event.status == EventStatus.processed:
         logger.info(f"Acknowledgement already processed for event: {ack.event_id}")
         return
 
-    event.processed = ack.processed
+    event.status = ack.status
 
-    if ack.processed == ProcessedState.processed:
+    if ack.status == EventStatus.processed:
         event.processed_at = ack.processed_at
-    elif ack.processed == ProcessedState.failed:
+    elif ack.status == EventStatus.failed:
         event.error_message = ack.error_message
 
     await session.commit()
@@ -62,7 +65,7 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
 async def send_ack(
     event_id: UUID,
     service: str,
-    processed_state: ProcessedState,
+    status: EventStatus,
     processed_at: datetime | None = None,
     error_message: str | None = None,
 ) -> None:
@@ -78,7 +81,7 @@ async def send_ack(
     await rabbitmq.broker.publish(
         AcknowledgementEvent(
             event_id=event_id,
-            processed=processed_state,
+            status=status,
             processed_at=processed_at,
             error_message=error_message,
         ),
@@ -115,18 +118,18 @@ async def handle_subscriber_event(
         await send_ack(
             event_id=event_id,
             service=data.service,
-            processed_state=ProcessedState.failed,
+            status=EventStatus.failed,
             error_message=log,
         )
 
         return
 
     # If the event has already been processed, send an acknowledgement to the publisher
-    if event and event.processed == ProcessedState.processed:
+    if event and event.status == EventStatus.processed:
         await send_ack(
             event_id=event_id,
             service=data.service,
-            processed_state=ProcessedState.processed,
+            status=EventStatus.processed,
             processed_at=event.processed_at,
         )
         return
@@ -137,17 +140,17 @@ async def handle_subscriber_event(
     else:
         event.retries += 1
 
-    processed_state = ProcessedState.pending
+    status = EventStatus.pending
     processed_at = None
     error_message = None
 
     try:
         await process_fn(session, data)
 
-        event.processed = ProcessedState.processed
+        event.status = EventStatus.processed
         event.processed_at = datetime.utcnow()
 
-        processed_state = ProcessedState.processed
+        status = EventStatus.processed
         processed_at = event.processed_at
     except Exception as e:
         await session.rollback()
@@ -156,10 +159,10 @@ async def handle_subscriber_event(
 
         logger.error(log)
 
-        event.processed = ProcessedState.failed
+        event.status = EventStatus.failed
         event.error_message = log
 
-        processed_state = ProcessedState.failed
+        status = EventStatus.failed
         error_message = log
 
     await session.commit()
@@ -167,7 +170,7 @@ async def handle_subscriber_event(
     await send_ack(
         event_id=event_id,
         service=data.service,
-        processed_state=processed_state,
+        status=status,
         processed_at=processed_at,
         error_message=error_message,
     )
@@ -201,7 +204,7 @@ async def handle_publish_event(
 
         logger.error(log)
 
-        event.processed = ProcessedState.failed
+        event.status = EventStatus.failed
         event.error_message = log
 
         await session.commit()

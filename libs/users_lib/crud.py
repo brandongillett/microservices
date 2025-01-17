@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -54,3 +55,67 @@ async def get_user_by_email(session: AsyncSession, email: str) -> Users | None:
     stmt = select(Users).where(Users.email == email)
     result = await session.exec(stmt)
     return result.one_or_none()
+
+
+async def update_user_username(
+    session: AsyncSession, user_id: UUID, new_username: str, commit: bool = True
+) -> Users:
+    """
+    Update the user username.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (UUID): The user ID.
+        new_username (str): The new username.
+        commit (bool): Commit at the end of the operation.
+
+    Returns:
+        Users: The updated user.
+    """
+    user = await get_user(session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    user.username = new_username
+    session.add(user)
+
+    if commit:
+        await session.commit()
+        await session.refresh(user)
+
+    return user
+
+
+async def update_user_role(
+    session: AsyncSession, user_id: UUID, role: str, commit: bool = True
+) -> Users:
+    """
+    Update the user role.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (UUID): The user ID.
+        new_role (str): The new role.
+        commit (bool): Commit at the end of the operation.
+
+    Returns:
+        Users: The updated user.
+    """
+    user = await get_user(session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    user.role = role
+    session.add(user)
+
+    if commit:
+        await session.commit()
+        await session.refresh(user)
+
+    return user
