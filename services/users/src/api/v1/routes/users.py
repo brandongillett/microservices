@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from libs.auth_lib.api.deps import RoleChecker, current_user
@@ -9,10 +11,15 @@ from libs.auth_lib.core.security import (
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.users_lib.crud import get_user_by_username, update_user_username
 from libs.users_lib.models import Users
-from libs.users_lib.schemas import UserPublic
+from libs.users_lib.schemas import (
+    UpdateUserPasswordEvent,
+    UpdateUserUsernameEvent,
+    UserPublic,
+)
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.api.events import handle_publish_event
+from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.schemas import Message
-from src.api.events import update_user_password_event, update_user_username_event
 from src.crud import update_user_password
 from src.schemas import (
     UpdatePassword,
@@ -85,20 +92,28 @@ async def update_username(
         commit=False,
     )
 
-    try:
-        # Publish the new username to the event broker
-        await update_user_username_event(
-            session=session, user_id=current_user.id, new_username=user.username
-        )
-    except Exception:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update username",
-        )
+    event_id = uuid4()
+    event_schema = UpdateUserUsernameEvent(
+        event_id=event_id, user_id=user.id, new_username=body.new_username
+    )
+
+    event = await create_outbox_event(
+        session=session,
+        event_id=event_id,
+        event_type="update_user_username",
+        data=event_schema.model_dump(mode="json"),
+        commit=False,
+    )
 
     await session.commit()
     await session.refresh(user)
+    await session.refresh(event)
+
+    await handle_publish_event(
+        session=session,
+        event=event,
+        event_schema=event_schema,
+    )
 
     return Message(message=f"Username updated to {body.new_username}")
 
@@ -148,19 +163,26 @@ async def update_password(
         commit=False,
     )
 
-    try:
-        # Publish the new password to the event broker
-        await update_user_password_event(
-            session=session, user_id=user.id, new_password=user.password
-        )
-    except Exception:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update password",
-        )
+    event_id = uuid4()
+    event_schema = UpdateUserPasswordEvent(
+        event_id=event_id, user_id=user.id, new_password=user.password
+    )
+
+    event = await create_outbox_event(
+        session=session,
+        event_id=event_id,
+        event_type="update_user_password",
+        data=event_schema.model_dump(mode="json"),
+        commit=False,
+    )
 
     await session.commit()
     await session.refresh(user)
+
+    await handle_publish_event(
+        session=session,
+        event=event,
+        event_schema=event_schema,
+    )
 
     return Message(message="Password updated successfully")

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -14,15 +14,16 @@ from libs.auth_lib.core.security import (
     security_settings as auth_lib_security_settings,
 )
 from libs.auth_lib.crud import verify_user_email
-from libs.auth_lib.schemas import TokenData
+from libs.auth_lib.schemas import CreateUserEvent, TokenData, VerifyUserEmailEvent, CreateUserEmailEvent
 from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep, client_ip_dep
+from libs.utils_lib.api.events import handle_publish_event
 from libs.utils_lib.core.security import rate_limiter
+from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.schemas import Message
 from src.api.config import api_settings
 from src.api.deps import consumed_refresh_token
-from src.api.events import create_user_event, verify_user_email_event
 from src.core.security import (
     gen_token,
     get_login_attempts,
@@ -86,22 +87,37 @@ async def register(
     user.username = user.username.lower()
     user.email = user.email.lower()
 
-    # Create the user
     new_user = await create_user(session, user_create=user, commit=False)
 
-    try:
-        # Publish the user to the broker
-        await create_user_event(session=session, user=new_user)
-    except Exception:
-        # Rollback the transaction if the event fails
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user {new_user.username}",
-        )
+    create_user_event_id = uuid4()
+    create_user_event_schema = CreateUserEvent(event_id=create_user_event_id, user=new_user)
+
+    create_user_event = await create_outbox_event(
+        session=session,
+        event_id=create_user_event_id,
+        event_type="create_user",
+        data=create_user_event_schema.model_dump(mode="json"),
+        commit=False,
+    )
+
+    create_user_email_event_id = uuid4()
+    create_user_email_event_schema = CreateUserEmailEvent(event_id=create_user_email_event_id, user=new_user)
+
+    create_user_email_event = await create_outbox_event(
+        session=session,
+        event_id=create_user_email_event_id,
+        event_type="create_user_email",
+        data=create_user_email_event_schema.model_dump(mode="json"),
+        commit=False,
+    )
 
     await session.commit()
     await session.refresh(new_user)
+    await session.refresh(create_user_event)
+    await session.refresh(create_user_email_event)
+
+    await handle_publish_event(session=session, event=create_user_event, event_schema=create_user_event_schema)
+    await handle_publish_event(session=session, event=create_user_email_event, event_schema=create_user_email_event_schema)
 
     # Return the user data
     return new_user
@@ -355,18 +371,21 @@ async def verify_email(session: async_session_dep, token: str) -> Message:
         session=session, user_id=user_id, commit=False
     )
 
-    try:
-        # Publish the user to the broker
-        await verify_user_email_event(session=session, user_id=user_id)
-    except Exception:
-        # Rollback the transaction if the event fails
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to verify email",
-        )
+    event_id = uuid4()
+    event_schema = VerifyUserEmailEvent(event_id=event_id, user_id=user_id)
+
+    event = await create_outbox_event(
+        session=session,
+        event_id=event_id,
+        event_type="verify_user_email",
+        data=event_schema.model_dump(mode="json"),
+        commit=False,
+    )
 
     await session.commit()
     await session.refresh(verified_user)
+    await session.refresh(event)
+
+    await handle_publish_event(session=session, event=event, event_schema=event_schema)
 
     return Message(message="Email verified")

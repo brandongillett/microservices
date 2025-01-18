@@ -1,16 +1,20 @@
+from uuid import uuid4
+
 import pytest
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.users_lib.schemas import (
+    UpdateUserPasswordEvent,
+    UpdateUserRoleEvent,
+    UpdateUserUsernameEvent,
+)
+from libs.utils_lib.api.events import handle_publish_event
+from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.tests.utils.utils import (
     create_and_login_user_helper,
     event_processed_helper,
     random_lower_string,
-)
-from src.api.events import (
-    update_user_password_event,
-    update_user_role_event,
-    update_user_username_event,
 )
 
 
@@ -22,8 +26,22 @@ async def test_update_user_username_event(
 
     new_username = random_lower_string()
 
-    event = await update_user_username_event(
-        session=db, user_id=user.id, new_username=new_username
+    event_id = uuid4()
+    event_schema = UpdateUserUsernameEvent(
+        event_id=event_id, user_id=user.id, new_username=new_username
+    )
+
+    event = await create_outbox_event(
+        session=db,
+        event_id=event_id,
+        event_type="update_user_username",
+        data=event_schema.model_dump(mode="json"),
+    )
+
+    await handle_publish_event(
+        session=db,
+        event=event,
+        event_schema=event_schema,
     )
 
     processed = await event_processed_helper(event.id)
@@ -39,8 +57,22 @@ async def test_update_user_password_event(
 
     new_password = "NewPassword@2"
 
-    event = await update_user_password_event(
-        session=db, user_id=user.id, new_password=new_password
+    event_id = uuid4()
+    event_schema = UpdateUserPasswordEvent(
+        event_id=event_id, user_id=user.id, new_password=new_password
+    )
+
+    event = await create_outbox_event(
+        session=db,
+        event_id=event_id,
+        event_type="update_user_password",
+        data=event_schema.model_dump(mode="json"),
+    )
+
+    await handle_publish_event(
+        session=db,
+        event=event,
+        event_schema=event_schema,
     )
 
     processed = await event_processed_helper(event.id)
@@ -56,7 +88,23 @@ async def test_update_user_role_event(
 
     new_role = "admin"
 
-    event = await update_user_role_event(session=db, user_id=user.id, new_role=new_role)
+    event_id = uuid4()
+    event_schema = UpdateUserRoleEvent(
+        event_id=event_id, user_id=user.id, new_role=new_role
+    )
+
+    event = await create_outbox_event(
+        session=db,
+        event_id=event_id,
+        event_type="update_user_role",
+        data=event_schema.model_dump(mode="json"),
+    )
+
+    await handle_publish_event(
+        session=db,
+        event=event,
+        event_schema=event_schema,
+    )
 
     processed = await event_processed_helper(event.id)
 

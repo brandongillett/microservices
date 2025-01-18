@@ -1,7 +1,7 @@
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 
 from libs.auth_lib.api.deps import RoleChecker
 from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
@@ -11,10 +11,11 @@ from libs.users_lib.crud import (
     update_user_role,
 )
 from libs.users_lib.models import Users
-from libs.users_lib.schemas import UserPublic
+from libs.users_lib.schemas import UpdateUserRoleEvent, UserPublic
 from libs.utils_lib.api.deps import async_session_dep
+from libs.utils_lib.api.events import handle_publish_event
+from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.schemas import Message
-from src.api.events import update_user_role_event
 from src.schemas import UpdateUserRole
 
 router = APIRouter()
@@ -84,18 +85,26 @@ async def update_role(
         session=session, user_id=user_id, role=body.new_role, commit=False
     )
 
-    try:
-        await update_user_role_event(
-            session=session, user_id=user_id, new_role=body.new_role
-        )
-    except Exception:
-        await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update user role",
-        )
+    event_id = uuid4()
+    event_schema = UpdateUserRoleEvent(
+        event_id=event_id, user_id=user.id, new_role=body.new_role
+    )
+
+    event = await create_outbox_event(
+        session=session,
+        event_id=event_id,
+        event_type="update_user_role",
+        data=event_schema.model_dump(mode="json"),
+        commit=False,
+    )
 
     await session.commit()
     await session.refresh(user)
+
+    await handle_publish_event(
+        session=session,
+        event=event,
+        event_schema=event_schema,
+    )
 
     return Message(message=f"{user.username} role updated to {body.new_role}")

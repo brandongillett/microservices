@@ -1,6 +1,7 @@
 from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.api.events import (
@@ -8,13 +9,16 @@ from libs.utils_lib.api.events import (
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.models import EventInbox, EventOutbox
+from libs.auth_lib.schemas import CreateUserEmailEvent
+from src.models import UserEmails
+from libs.utils_lib.api.events import handle_subscriber_event
 
 rabbit_router = RabbitRouter()
 
 
 # Exchanges
 @rabbit_router.subscriber(
-    RabbitQueue(name="cleanup_database_users", durable=True),
+    RabbitQueue(name="cleanup_database_users"),
     RabbitExchange("cleanup_database", type=ExchangeType.FANOUT),
 )
 async def cleanup_database_event(session: async_session_dep) -> None:
@@ -39,6 +43,38 @@ async def cleanup_database_event(session: async_session_dep) -> None:
 
 
 # Subscriber events
+@rabbit_router.subscriber(RabbitQueue(name="create_user_email", durable=True))
+async def create_user_email_event(session: async_session_dep, data: CreateUserEmailEvent) -> None:
+    """
+    Subscribes to an event to create a user.
 
+    Args:
+        session: The database session.
+        user (User): The user to create.
+    """
+
+    async def process_create_user(session: AsyncSession, data: CreateUserEmailEvent) -> None:
+        """
+        Processes the logic for creating a user.
+
+        Args:
+            session: The database session.
+            data: The event containing the user details to be created.
+
+        Returns:
+            None
+        """
+        dbObj = UserEmails.model_validate(data.user)
+        session.add(dbObj)
+        await session.commit()
+        await session.refresh(dbObj)
+
+    await handle_subscriber_event(
+        session=session,
+        event_id=data.event_id,
+        event_type="create_user_email",
+        process_fn=process_create_user,
+        data=data,
+    )
 
 # Publisher events

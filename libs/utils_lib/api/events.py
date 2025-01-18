@@ -13,7 +13,6 @@ from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.crud import (
     create_inbox_event,
-    create_outbox_event,
     get_inbox_event,
     get_outbox_event,
 )
@@ -177,7 +176,9 @@ async def handle_subscriber_event(
 
 
 async def handle_publish_event(
-    session: AsyncSession, event_type: str, event_schema: BaseModel
+    session: AsyncSession,
+    event: EventOutbox,
+    event_schema: BaseModel,
 ) -> EventOutbox:
     """
     Handles the publishing of events to RabbitMQ.
@@ -190,17 +191,12 @@ async def handle_publish_event(
     Returns:
         EventOutbox: The event outbox record.
     """
-    event_id = event_schema.event_id
-    event_data = event_schema.model_dump(mode="json")
-
-    event = await create_outbox_event(
-        session=session, event_id=event_id, event_type=event_type, data=event_data
-    )
-
     try:
-        await rabbitmq.broker.publish(event_schema, queue=event_type, persist=True)
+        await rabbitmq.broker.publish(
+            event_schema, queue=event.event_type, persist=True
+        )
     except Exception as e:
-        log = f"Error publishing event: {event_id} - {str(e)}"
+        log = f"Error publishing event: {event.id} - {str(e)}"
 
         logger.error(log)
 

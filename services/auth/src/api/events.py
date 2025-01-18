@@ -1,11 +1,8 @@
-from uuid import UUID, uuid4
-
 from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEmailEvent
 from libs.users_lib.crud import get_user, update_user_role, update_user_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
@@ -15,12 +12,10 @@ from libs.users_lib.schemas import (
 )
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.api.events import (
-    handle_publish_event,
     handle_subscriber_event,
     logger,
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
-from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.models import EventInbox, EventOutbox
 from src.models import RefreshTokens
 
@@ -29,7 +24,7 @@ rabbit_router = RabbitRouter()
 
 # Exchanges
 @rabbit_router.subscriber(
-    RabbitQueue(name="cleanup_database_auth", durable=True),
+    RabbitQueue(name="cleanup_database_auth"),
     RabbitExchange("cleanup_database", type=ExchangeType.FANOUT),
 )
 async def cleanup_database_event(session: async_session_dep) -> None:
@@ -171,52 +166,3 @@ async def update_user_role_event(
         process_fn=process_update_user_role,
         data=data,
     )
-
-
-# Publisher events
-async def create_root_user_event(user: Users) -> None:
-    """
-    Publishes an event to create a user
-
-    Args:
-        user (User): The user to create.
-    """
-    await rabbitmq.broker.publish(user, queue="create_root_user")
-
-
-async def create_user_event(session: AsyncSession, user: Users) -> EventOutbox:
-    """
-    Publishes an event to create a user
-
-    Args:
-        user (User): The user to create.
-
-    Returns:
-        EventOutbox: The event outbox record.
-    """
-    event_schema = CreateUserEvent(event_id=uuid4(), user=user)
-
-    event = await handle_publish_event(
-        session=session, event_type="create_user", event_schema=event_schema
-    )
-
-    return event
-
-
-async def verify_user_email_event(session: AsyncSession, user_id: UUID) -> EventOutbox:
-    """
-    Publishes an event to create a user
-
-    Args:
-        user_id (UUID): The user ID.
-
-    Returns:
-        EventOutbox: The event outbox record.
-    """
-    event_schema = VerifyUserEmailEvent(event_id=uuid4(), user_id=user_id)
-
-    event = await handle_publish_event(
-        session=session, event_type="verify_user_email", event_schema=event_schema
-    )
-
-    return event

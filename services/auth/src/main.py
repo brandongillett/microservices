@@ -13,7 +13,6 @@ from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
 from src.api import events
-from src.api.events import create_root_user_event
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
 from src.crud import create_root_user
@@ -55,7 +54,7 @@ async def lifespan(app: FastAPI) -> Any:
             root_user = await create_root_user(
                 session, utils_lib_settings.ROOT_USER_PASSWORD
             )
-        await create_root_user_event(user=root_user)
+        await rabbitmq.broker.publish(root_user, queue="create_root_user")
     yield
     # Close database, Redis, and RabbitMQ connections on shutdown
     await session_manager.close()
