@@ -14,7 +14,12 @@ from libs.auth_lib.core.security import (
     security_settings as auth_lib_security_settings,
 )
 from libs.auth_lib.crud import verify_user_email
-from libs.auth_lib.schemas import CreateUserEvent, TokenData, VerifyUserEmailEvent, CreateUserEmailEvent
+from libs.auth_lib.schemas import (
+    CreateUserEmailEvent,
+    CreateUserEvent,
+    TokenData,
+    VerifyUserEmailEvent,
+)
 from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep, client_ip_dep
@@ -90,7 +95,9 @@ async def register(
     new_user = await create_user(session, user_create=user, commit=False)
 
     create_user_event_id = uuid4()
-    create_user_event_schema = CreateUserEvent(event_id=create_user_event_id, user=new_user)
+    create_user_event_schema = CreateUserEvent(
+        event_id=create_user_event_id, user=new_user
+    )
 
     create_user_event = await create_outbox_event(
         session=session,
@@ -101,7 +108,9 @@ async def register(
     )
 
     create_user_email_event_id = uuid4()
-    create_user_email_event_schema = CreateUserEmailEvent(event_id=create_user_email_event_id, user=new_user)
+    create_user_email_event_schema = CreateUserEmailEvent(
+        event_id=create_user_email_event_id, user=new_user
+    )
 
     create_user_email_event = await create_outbox_event(
         session=session,
@@ -116,8 +125,14 @@ async def register(
     await session.refresh(create_user_event)
     await session.refresh(create_user_email_event)
 
-    await handle_publish_event(session=session, event=create_user_event, event_schema=create_user_event_schema)
-    await handle_publish_event(session=session, event=create_user_email_event, event_schema=create_user_email_event_schema)
+    await handle_publish_event(
+        session=session, event=create_user_event, event_schema=create_user_event_schema
+    )
+    await handle_publish_event(
+        session=session,
+        event=create_user_email_event,
+        event_schema=create_user_email_event_schema,
+    )
 
     # Return the user data
     return new_user

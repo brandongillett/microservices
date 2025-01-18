@@ -3,15 +3,15 @@ from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.auth_lib.schemas import CreateUserEmailEvent
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.api.events import (
+    handle_subscriber_event,
     logger,
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.models import EventInbox, EventOutbox
-from libs.auth_lib.schemas import CreateUserEmailEvent
 from src.models import UserEmails
-from libs.utils_lib.api.events import handle_subscriber_event
 
 rabbit_router = RabbitRouter()
 
@@ -44,7 +44,9 @@ async def cleanup_database_event(session: async_session_dep) -> None:
 
 # Subscriber events
 @rabbit_router.subscriber(RabbitQueue(name="create_user_email", durable=True))
-async def create_user_email_event(session: async_session_dep, data: CreateUserEmailEvent) -> None:
+async def create_user_email_event(
+    session: async_session_dep, data: CreateUserEmailEvent
+) -> None:
     """
     Subscribes to an event to create a user.
 
@@ -53,7 +55,9 @@ async def create_user_email_event(session: async_session_dep, data: CreateUserEm
         user (User): The user to create.
     """
 
-    async def process_create_user(session: AsyncSession, data: CreateUserEmailEvent) -> None:
+    async def process_create_user(
+        session: AsyncSession, data: CreateUserEmailEvent
+    ) -> None:
         """
         Processes the logic for creating a user.
 
@@ -76,5 +80,6 @@ async def create_user_email_event(session: async_session_dep, data: CreateUserEm
         process_fn=process_create_user,
         data=data,
     )
+
 
 # Publisher events
