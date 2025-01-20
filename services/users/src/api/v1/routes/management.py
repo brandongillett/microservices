@@ -93,7 +93,7 @@ async def update_role(
     event = await create_outbox_event(
         session=session,
         event_id=event_id,
-        event_type="update_user_role",
+        event_type="auth_service_update_role",
         data=event_schema.model_dump(mode="json"),
         commit=False,
     )

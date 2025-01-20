@@ -92,27 +92,51 @@ async def update_username(
         commit=False,
     )
 
-    event_id = uuid4()
-    event_schema = UpdateUserUsernameEvent(
-        event_id=event_id, user_id=user.id, new_username=body.new_username
+    # Create update user username event
+    update_user_username_event_id = uuid4()
+    update_user_username_event_schema = UpdateUserUsernameEvent(
+        event_id=update_user_username_event_id,
+        user_id=user.id,
+        new_username=body.new_username,
     )
 
-    event = await create_outbox_event(
+    update_user_username_event = await create_outbox_event(
         session=session,
-        event_id=event_id,
-        event_type="update_user_username",
-        data=event_schema.model_dump(mode="json"),
+        event_id=update_user_username_event_id,
+        event_type="auth_service_update_username",
+        data=update_user_username_event_schema.model_dump(mode="json"),
+        commit=False,
+    )
+
+    update_user_email_username_event_id = uuid4()
+    update_user_email_username_event_schema = UpdateUserUsernameEvent(
+        event_id=update_user_email_username_event_id,
+        user_id=user.id,
+        new_username=body.new_username,
+    )
+
+    update_user_email_username_event = await create_outbox_event(
+        session=session,
+        event_id=update_user_email_username_event_id,
+        event_type="emails_service_update_username",
+        data=update_user_email_username_event_schema.model_dump(mode="json"),
         commit=False,
     )
 
     await session.commit()
     await session.refresh(user)
-    await session.refresh(event)
+    await session.refresh(update_user_username_event)
+    await session.refresh(update_user_email_username_event)
 
     await handle_publish_event(
         session=session,
-        event=event,
-        event_schema=event_schema,
+        event=update_user_username_event,
+        event_schema=update_user_username_event_schema,
+    )
+    await handle_publish_event(
+        session=session,
+        event=update_user_email_username_event,
+        event_schema=update_user_email_username_event_schema,
     )
 
     return Message(message=f"Username updated to {body.new_username}")
@@ -171,7 +195,7 @@ async def update_password(
     event = await create_outbox_event(
         session=session,
         event_id=event_id,
-        event_type="update_user_password",
+        event_type="auth_service_update_password",
         data=event_schema.model_dump(mode="json"),
         commit=False,
     )

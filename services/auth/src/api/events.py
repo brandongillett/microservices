@@ -51,8 +51,10 @@ async def cleanup_database_event(session: async_session_dep) -> None:
 
 
 # Subscriber events
-@rabbit_router.subscriber(RabbitQueue(name="update_user_username", durable=True))
-async def update_user_username_event(
+@rabbit_router.subscriber(
+    RabbitQueue(name="auth_service_update_username", durable=True)
+)
+async def update_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
 ) -> None:
     """
@@ -64,7 +66,7 @@ async def update_user_username_event(
     """
 
     # Callable function to process the event
-    async def process_update_user_username(
+    async def process_update_username(
         session: AsyncSession, data: UpdateUserUsernameEvent
     ) -> None:
         """
@@ -82,14 +84,16 @@ async def update_user_username_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="update_user_username",
-        process_fn=process_update_user_username,
+        event_type="auth_service_update_username",
+        process_fn=process_update_username,
         data=data,
     )
 
 
-@rabbit_router.subscriber(RabbitQueue(name="update_user_password", durable=True))
-async def update_user_password_event(
+@rabbit_router.subscriber(
+    RabbitQueue(name="auth_service_update_password", durable=True)
+)
+async def update_password_event(
     session: async_session_dep, data: UpdateUserPasswordEvent
 ) -> None:
     """
@@ -100,7 +104,7 @@ async def update_user_password_event(
         data: The event containing the user details to be updated
     """
 
-    async def process_update_user_password(
+    async def process_update_password(
         session: AsyncSession, data: UpdateUserPasswordEvent
     ) -> None:
         """
@@ -126,14 +130,14 @@ async def update_user_password_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="update_user_password",
-        process_fn=process_update_user_password,
+        event_type="auth_service_update_password",
+        process_fn=process_update_password,
         data=data,
     )
 
 
-@rabbit_router.subscriber(RabbitQueue(name="update_user_role", durable=True))
-async def update_user_role_event(
+@rabbit_router.subscriber(RabbitQueue(name="auth_service_update_role", durable=True))
+async def update_role_event(
     session: async_session_dep, data: UpdateUserRoleEvent
 ) -> None:
     """
@@ -144,7 +148,7 @@ async def update_user_role_event(
         data: The event containing the user details to be updated
     """
 
-    async def process_update_user_role(
+    async def process_user_role(
         session: AsyncSession, data: UpdateUserRoleEvent
     ) -> None:
         """
@@ -162,7 +166,7 @@ async def update_user_role_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="update_user_role",
-        process_fn=process_update_user_role,
+        event_type="auth_service_update_role",
+        process_fn=process_user_role,
         data=data,
     )

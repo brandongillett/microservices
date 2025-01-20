@@ -54,7 +54,10 @@ async def lifespan(app: FastAPI) -> Any:
             root_user = await create_root_user(
                 session, utils_lib_settings.ROOT_USER_PASSWORD
             )
-        await rabbitmq.broker.publish(root_user, queue="create_root_user")
+        await rabbitmq.broker.publish(root_user, queue="users_service_create_root_user")
+        await rabbitmq.broker.publish(
+            root_user, queue="emails_service_create_root_user"
+        )
     yield
     # Close database, Redis, and RabbitMQ connections on shutdown
     await session_manager.close()

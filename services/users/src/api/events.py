@@ -4,7 +4,7 @@ from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.crud import verify_user_email
-from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEmailEvent
+from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEvent
 from libs.users_lib.crud import get_user_by_username
 from libs.users_lib.models import Users
 from libs.utils_lib.api.deps import async_session_dep
@@ -45,7 +45,7 @@ async def cleanup_database_event(session: async_session_dep) -> None:
 
 
 # Subscriber events
-@rabbit_router.subscriber("create_root_user")
+@rabbit_router.subscriber("users_service_create_root_user")
 async def create_root_user_event(session: async_session_dep, user: Users) -> None:
     """
     Subscribes to an event to create a user.
@@ -64,7 +64,7 @@ async def create_root_user_event(session: async_session_dep, user: Users) -> Non
         logger.info("Root user created.")
 
 
-@rabbit_router.subscriber(RabbitQueue(name="create_user", durable=True))
+@rabbit_router.subscriber(RabbitQueue(name="users_service_create_user", durable=True))
 async def create_user_event(session: async_session_dep, data: CreateUserEvent) -> None:
     """
     Subscribes to an event to create a user.
@@ -93,16 +93,14 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="create_user",
+        event_type="users_service_create_user",
         process_fn=process_create_user,
         data=data,
     )
 
 
-@rabbit_router.subscriber(RabbitQueue(name="verify_user_email", durable=True))
-async def verify_user_email_event(
-    session: async_session_dep, data: VerifyUserEmailEvent
-) -> None:
+@rabbit_router.subscriber(RabbitQueue(name="users_service_verify_user", durable=True))
+async def verify_user_event(session: async_session_dep, data: VerifyUserEvent) -> None:
     """
     Subscribes to an event to to verify a user's email.
 
@@ -111,8 +109,8 @@ async def verify_user_email_event(
         user (User): The user to create.
     """
 
-    async def process_verify_user_email_event(
-        session: AsyncSession, data: VerifyUserEmailEvent
+    async def process_verify_user_event(
+        session: AsyncSession, data: VerifyUserEvent
     ) -> None:
         """
         Processes the logic for verifying a user's email.
@@ -129,7 +127,7 @@ async def verify_user_email_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="verify_user_email",
-        process_fn=process_verify_user_email_event,
+        event_type="users_service_verify_user",
+        process_fn=process_verify_user_event,
         data=data,
     )

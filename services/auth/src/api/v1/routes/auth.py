@@ -1,24 +1,18 @@
 from datetime import datetime, timedelta
 from typing import Annotated, Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from libs.auth_lib.core.security import (
+    gen_url_token,
     is_password_complex,
     is_username_complex,
-    verify_url_token,
 )
-from libs.auth_lib.core.security import (
-    security_settings as auth_lib_security_settings,
-)
-from libs.auth_lib.crud import verify_user_email
 from libs.auth_lib.schemas import (
-    CreateUserEmailEvent,
     CreateUserEvent,
     TokenData,
-    VerifyUserEmailEvent,
 )
 from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
 from libs.users_lib.schemas import UserPublic
@@ -92,8 +86,10 @@ async def register(
     user.username = user.username.lower()
     user.email = user.email.lower()
 
+    # Create the user
     new_user = await create_user(session, user_create=user, commit=False)
 
+    # Create create user event
     create_user_event_id = uuid4()
     create_user_event_schema = CreateUserEvent(
         event_id=create_user_event_id, user=new_user
@@ -102,29 +98,32 @@ async def register(
     create_user_event = await create_outbox_event(
         session=session,
         event_id=create_user_event_id,
-        event_type="create_user",
+        event_type="users_service_create_user",
         data=create_user_event_schema.model_dump(mode="json"),
         commit=False,
     )
 
+    # Create create user email event
     create_user_email_event_id = uuid4()
-    create_user_email_event_schema = CreateUserEmailEvent(
+    create_user_email_event_schema = CreateUserEvent(
         event_id=create_user_email_event_id, user=new_user
     )
 
     create_user_email_event = await create_outbox_event(
         session=session,
         event_id=create_user_email_event_id,
-        event_type="create_user_email",
+        event_type="emails_service_create_user",
         data=create_user_email_event_schema.model_dump(mode="json"),
         commit=False,
     )
 
+    # Commit and refresh the user
     await session.commit()
     await session.refresh(new_user)
     await session.refresh(create_user_event)
     await session.refresh(create_user_email_event)
 
+    # Publish the events
     await handle_publish_event(
         session=session, event=create_user_event, event_schema=create_user_event_schema
     )
@@ -133,6 +132,8 @@ async def register(
         event=create_user_email_event,
         event_schema=create_user_email_event_schema,
     )
+
+    print(gen_url_token({"user_id": str(new_user.id)}, "email_verification"))
 
     # Return the user data
     return new_user
@@ -343,64 +344,3 @@ async def refresh_access_token(
     )
 
     return Token(access_token=access_token, token_type="bearer")
-
-
-@router.get("/verify/{token}", response_model=Message)
-async def verify_email(session: async_session_dep, token: str) -> Message:
-    """
-    Verify email address.
-
-    Args:
-        session (AsyncSession): The database session.
-        token (str): The verification token.
-
-    Returns:
-        dict: The verification message.
-    """
-    token_data = verify_url_token(
-        token=token,
-        salt="email_verification",
-        expiration=auth_lib_security_settings.EMAIL_VERIFICATION_EXPIRES_MINUTES,
-    )
-
-    user_id = UUID(token_data.get("user_id"))
-
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
-        )
-
-    user = await get_user(session, user_id=user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
-
-    if user.verified:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already verified"
-        )
-
-    verified_user = await verify_user_email(
-        session=session, user_id=user_id, commit=False
-    )
-
-    event_id = uuid4()
-    event_schema = VerifyUserEmailEvent(event_id=event_id, user_id=user_id)
-
-    event = await create_outbox_event(
-        session=session,
-        event_id=event_id,
-        event_type="verify_user_email",
-        data=event_schema.model_dump(mode="json"),
-        commit=False,
-    )
-
-    await session.commit()
-    await session.refresh(verified_user)
-    await session.refresh(event)
-
-    await handle_publish_event(session=session, event=event, event_schema=event_schema)
-
-    return Message(message="Email verified")

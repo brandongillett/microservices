@@ -19,7 +19,7 @@ from libs.utils_lib.tests.utils.utils import (
 
 
 @pytest.mark.anyio
-async def test_update_user_username_event(
+async def test_auth_service_update_username_event(
     db: AsyncSession, auth_client: AsyncClient
 ) -> None:
     _, user = await create_and_login_user_helper(db, auth_client)
@@ -34,7 +34,7 @@ async def test_update_user_username_event(
     event = await create_outbox_event(
         session=db,
         event_id=event_id,
-        event_type="update_user_username",
+        event_type="auth_service_update_username",
         data=event_schema.model_dump(mode="json"),
     )
 
@@ -50,7 +50,38 @@ async def test_update_user_username_event(
 
 
 @pytest.mark.anyio
-async def test_update_user_password_event(
+async def test_emails_service_update_username_event(
+    db: AsyncSession, auth_client: AsyncClient
+) -> None:
+    _, user = await create_and_login_user_helper(db, auth_client)
+
+    new_username = random_lower_string()
+
+    event_id = uuid4()
+    event_schema = UpdateUserUsernameEvent(
+        event_id=event_id, user_id=user.id, new_username=new_username
+    )
+
+    event = await create_outbox_event(
+        session=db,
+        event_id=event_id,
+        event_type="emails_service_update_username",
+        data=event_schema.model_dump(mode="json"),
+    )
+
+    await handle_publish_event(
+        session=db,
+        event=event,
+        event_schema=event_schema,
+    )
+
+    processed = await event_processed_helper(event.id)
+
+    assert processed
+
+
+@pytest.mark.anyio
+async def test_auth_service_update_password_event(
     db: AsyncSession, auth_client: AsyncClient
 ) -> None:
     _, user = await create_and_login_user_helper(db, auth_client)
@@ -65,7 +96,7 @@ async def test_update_user_password_event(
     event = await create_outbox_event(
         session=db,
         event_id=event_id,
-        event_type="update_user_password",
+        event_type="auth_service_update_password",
         data=event_schema.model_dump(mode="json"),
     )
 
@@ -81,7 +112,7 @@ async def test_update_user_password_event(
 
 
 @pytest.mark.anyio
-async def test_update_user_role_event(
+async def test_auth_service_update_role_event(
     db: AsyncSession, auth_client: AsyncClient
 ) -> None:
     _, user = await create_and_login_user_helper(db, auth_client)
@@ -96,7 +127,7 @@ async def test_update_user_role_event(
     event = await create_outbox_event(
         session=db,
         event_id=event_id,
-        event_type="update_user_role",
+        event_type="auth_service_update_role",
         data=event_schema.model_dump(mode="json"),
     )
 

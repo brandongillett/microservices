@@ -19,9 +19,5 @@ class CreateUserEvent(EventMessageBase):
     user: Users
 
 
-class CreateUserEmailEvent(EventMessageBase):
-    user: Users
-
-
-class VerifyUserEmailEvent(EventMessageBase):
+class VerifyUserEvent(EventMessageBase):
     user_id: UUID
