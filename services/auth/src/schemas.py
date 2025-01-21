@@ -1,7 +1,6 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import EmailStr
 from sqlmodel import SQLModel
 
 from src.models import RefreshTokenBase
@@ -16,7 +15,7 @@ class Token(SQLModel):
 # User schemas
 class UserCreate(SQLModel):
     username: str
-    email: EmailStr
+    email: str
     password: str
 
 

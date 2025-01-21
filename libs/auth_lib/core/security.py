@@ -1,3 +1,4 @@
+import re
 from uuid import UUID
 
 import jwt
@@ -21,6 +22,8 @@ class security_settings(BaseSettings):
     USERNAME_MAX_LENGTH: int = 22
     PASSWORD_MIN_LENGTH: int = 8
     PASSWORD_MAX_LENGTH: int = 40
+    EMAIL_MIN_LENGTH: int = 3
+    EMAIL_MAX_LENGTH: int = 255
 
     # Email verification token expiration time
     EMAIL_VERIFICATION_EXPIRES_MINUTES: int = 30
@@ -128,6 +131,29 @@ def get_password_hash(password: str) -> str:
 
 
 # Username and password validation
+def is_email_valid(email: str) -> str | None:
+    """
+    Check if an email address is valid.
+
+    Args:
+        email (str): The email address to validate
+
+    Returns:
+        str | None: An error message if the email is invalid, None otherwise.
+    """
+    if not (
+        security_settings.EMAIL_MIN_LENGTH
+        <= len(email)
+        <= security_settings.EMAIL_MAX_LENGTH
+    ):
+        return f"Email must be between {security_settings.EMAIL_MIN_LENGTH} and {security_settings.EMAIL_MAX_LENGTH} characters long"
+
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return "Invalid email address"
+
+    return None
+
+
 def is_username_complex(username: str) -> str | None:
     """
     Check if a username meets the required complexity.

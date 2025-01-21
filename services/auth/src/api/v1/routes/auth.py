@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from libs.auth_lib.core.security import (
-    gen_url_token,
+    is_email_valid,
     is_password_complex,
     is_username_complex,
 )
@@ -60,11 +60,16 @@ async def register(
     """
     _ = request  # Unused variable (mandatory for rate limiter)
 
-    # Check if username and password meet the required complexity
+    # Check if email, username, and password meet the required complexity
     username_complexity = is_username_complex(user.username)
     if username_complexity:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=username_complexity
+        )
+    email_valid = is_email_valid(user.email)
+    if email_valid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=email_valid
         )
     password_complexity = is_password_complex(user.password)
     if password_complexity:
@@ -132,8 +137,6 @@ async def register(
         event=create_user_email_event,
         event_schema=create_user_email_event_schema,
     )
-
-    print(gen_url_token({"user_id": str(new_user.id)}, "email_verification"))
 
     # Return the user data
     return new_user
