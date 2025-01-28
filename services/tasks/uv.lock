@@ -1755,7 +1755,7 @@ dependencies = [
     { name = "tenacity" },
 ]
 
-[package.dependency-groups]
+[package.dev-dependencies]
 dev = [
     { name = "coverage" },
     { name = "mypy" },
@@ -1796,7 +1796,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.2.3,<9.0.0" },
 ]
 
-[package.metadata.dependency-groups]
+[package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.4.3,<8.0.0" },
     { name = "mypy", specifier = ">=1.8.0,<2.0.0" },

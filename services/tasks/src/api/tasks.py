@@ -6,7 +6,6 @@ from libs.utils_lib.core.rabbitmq import rabbitmq
 
 
 async def resend_outbox_events(interval: int) -> None:
-    """This task runs every 5 minutes"""
     while True:
         await asyncio.sleep(interval)
         await rabbitmq.broker.publish(exchange="resend_outbox_events")
