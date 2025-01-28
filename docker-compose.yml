@@ -234,6 +234,7 @@ services:
             - src/alembic
             - htmlcov
             - libs
+            - .venv
         - path: ./services/auth/pyproject.toml
           action: rebuild
     volumes:
@@ -286,6 +287,7 @@ services:
             - src/alembic
             - htmlcov
             - libs
+            - .venv
         - path: ./services/users/pyproject.toml
           action: rebuild
     volumes:
@@ -338,6 +340,7 @@ services:
             - src/alembic
             - htmlcov
             - libs
+            - .venv
         - path: ./services/emails/pyproject.toml
           action: rebuild
     volumes:
@@ -389,6 +392,7 @@ services:
           ignore:
             - htmlcov
             - libs
+            - .venv
         - path: ./services/tasks/pyproject.toml
           action: rebuild
     volumes:
