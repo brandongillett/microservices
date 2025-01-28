@@ -193,6 +193,29 @@ services:
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
     <<: *build
 
+  prestart-tasks:
+    build:
+      context: ./services/tasks
+    networks:
+      - traefik-public
+      - default
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+    command: bash /app/scripts/prestart.sh
+    volumes:
+      - ./libs:/app/libs
+    environment:
+      <<: *environment-vars
+    <<: *build
+
   auth-service:
     build:
       context: ./services/auth
@@ -348,6 +371,55 @@ services:
       - traefik.http.services.${STACK_NAME?Variable not set}-emails.loadbalancer.server.port=8000
       - traefik.http.routers.${STACK_NAME?Variable not set}-emails-http.rule=Host(`emails.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-emails-http.entrypoints=http
+
+  tasks-service:
+    build:
+      context: ./services/tasks
+    command:
+      - fastapi
+      - run
+      - --reload
+      - "src/main.py"
+      - "--no-proxy-headers"
+    develop:
+      watch:
+        - path: ./services/tasks
+          action: sync
+          target: /app
+          ignore:
+            - htmlcov
+            - libs
+        - path: ./services/tasks/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./libs:/app/libs
+      - ./services/tasks/htmlcov:/app/htmlcov
+    environment:
+      <<: *environment-vars
+    <<: *build
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+      prestart-tasks:
+        condition: service_completed_successfully
+    networks:
+      - traefik-public
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.services.${STACK_NAME?Variable not set}-tasks.loadbalancer.server.port=8000
+      - traefik.http.routers.${STACK_NAME?Variable not set}-tasks-http.rule=Host(`tasks.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-tasks-http.entrypoints=http
 
 volumes:
   mysql-data:

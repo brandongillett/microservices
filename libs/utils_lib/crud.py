@@ -1,9 +1,10 @@
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.utils_lib.models import EventInbox, EventOutbox
+from libs.utils_lib.models import EventInbox, EventOutbox, EventStatus
 
 
 # CRUD operations for EventInbox
@@ -96,3 +97,45 @@ async def get_outbox_event(session: AsyncSession, event_id: UUID) -> EventOutbox
     stmt = select(EventOutbox).where(EventOutbox.id == event_id)
     result = await session.exec(stmt)
     return result.one_or_none()
+
+
+async def get_failed_outbox_events(session: AsyncSession) -> list[EventOutbox]:
+    """
+    Get all failed outbox events.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        list[EventOutbox]: The list of failed outbox events.
+    """
+    stmt = select(EventOutbox).where(EventOutbox.status == EventStatus.failed)
+    result = await session.exec(stmt)
+    return result.all()
+
+
+async def get_pending_outbox_events(
+    session: AsyncSession, time: int | None
+) -> list[EventOutbox]:
+    """
+    Get all pending outbox events. If time is provided, get all pending outbox events older than the given time in minutes.
+
+    Args:
+        session (AsyncSession): The database session.
+        time (int): The time in minutes.
+
+    Returns:
+        list[EventOutbox]: The list of pending outbox events.
+    """
+    if time:
+        minutes_ago = datetime.utcnow() - timedelta(minutes=time)
+
+        stmt = select(EventOutbox).where(
+            EventOutbox.status == EventStatus.pending,
+            EventOutbox.created_at < minutes_ago,
+        )
+    else:
+        stmt = select(EventOutbox).where(EventOutbox.status == EventStatus.pending)
+
+    result = await session.exec(stmt)
+    return result.all()

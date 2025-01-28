@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from faststream.rabbit import RabbitQueue
+from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -13,8 +13,10 @@ from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.crud import (
     create_inbox_event,
+    get_failed_outbox_events,
     get_inbox_event,
     get_outbox_event,
+    get_pending_outbox_events,
 )
 from libs.utils_lib.models import EventOutbox, EventStatus
 from libs.utils_lib.schemas import AcknowledgementEvent
@@ -57,6 +59,48 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
         event.processed_at = ack.processed_at
     elif ack.status == EventStatus.failed:
         event.error_message = ack.error_message
+
+    await session.commit()
+
+
+@rabbit_router.subscriber(
+    RabbitQueue(name=f"resend_outbox_events_{settings.SERVICE_NAME}"),
+    RabbitExchange("resend_outbox_events", type=ExchangeType.FANOUT),
+)
+async def resend_outbox_events(session: async_session_dep) -> None:
+    """
+    Subscribes to an event to resend failed/pending outbox events.
+
+    Args:
+        session: The database session.
+    """
+    try:
+        failed_events = await get_failed_outbox_events(session)
+    except Exception as e:
+        logger.error(f"Error fetching failed outbox events: {str(e)}")
+        return
+
+    for event in failed_events:
+        await handle_publish_event(
+            session=session, event=event, event_schema=event.data
+        )
+
+        event.retries += 1
+
+    await session.commit()
+
+    try:
+        pending_events = await get_pending_outbox_events(session, time=10)
+    except Exception as e:
+        logger.error(f"Error fetching pending outbox events: {str(e)}")
+        return
+
+    for event in pending_events:
+        await handle_publish_event(
+            session=session, event=event, event_schema=event.data
+        )
+
+        event.retries += 1
 
     await session.commit()
 
