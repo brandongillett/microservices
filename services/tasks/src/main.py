@@ -10,7 +10,7 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
-from src.api.tasks import task_scheduler
+from src.api.tasks import start_task_scheduler, stop_task_scheduler
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
 
@@ -37,12 +37,15 @@ async def lifespan(app: FastAPI) -> Any:
     await rabbitmq.start()
 
     # Start task scheduler
-    await task_scheduler()
+    await start_task_scheduler()
 
     yield
     # Close database, Redis, and RabbitMQ connections on shutdown
     await redis_client.close()
     await rabbitmq.close()
+
+    # Stop task scheduler
+    await stop_task_scheduler()
 
 
 app = FastAPI(
