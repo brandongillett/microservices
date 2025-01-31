@@ -64,8 +64,8 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
 
 
 @rabbit_router.subscriber(
-    RabbitQueue(name=f"resend_outbox_events_{settings.SERVICE_NAME}"),
-    RabbitExchange("resend_outbox_events", type=ExchangeType.FANOUT),
+    RabbitQueue(name=f"resend_outbox_events_{settings.SERVICE_NAME}", durable=True),
+    RabbitExchange("resend_outbox_events", type=ExchangeType.FANOUT, durable=True),
 )
 async def resend_outbox_events(session: async_session_dep) -> None:
     """
