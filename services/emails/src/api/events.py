@@ -67,7 +67,7 @@ async def create_root_user_event(session: async_session_dep, user: UserEmails) -
 
 
 @rabbit_router.subscriber(RabbitQueue(name="emails_service_create_user", durable=True))
-async def create_user_email_event(
+async def create_user_event(
     session: async_session_dep, data: CreateUserEvent
 ) -> None:
     """
