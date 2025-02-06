@@ -94,7 +94,7 @@ Keep in mind these checks will also be done when pushing to the main branch.
 
 
 ## Service Uniformity
-In this project, it is essential to maintain consistent naming conventions for all services, Docker containers, and configuration variables. Adhering to these naming standards ensures uniformity and easier management across the entire system.
+In this project, it is essential to maintain consistent naming conventions for all services, Docker containers, and configuration variables. Adhering to these standards ensures uniformity and easier management across the entire system.
 
 ### Service Folder Naming
 * Every service folder in the ```services/``` directory must be named according to the service's core functionality, using lowercase letters.
