@@ -121,6 +121,18 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
       - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
+  mailcatcher:
+    image: schickling/mailcatcher
+    ports:
+      - "1025:1025"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.constraint-label=traefik-public
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mailcatcher-http.rule=Host(`mailcatcher.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.${STACK_NAME?Variable not set}-mailcatcher-http.entrypoints=http
+      - traefik.http.services.${STACK_NAME?Variable not set}-mailcatcher.loadbalancer.server.port=1080
+
   prestart-auth:
     build:
       context: ./services/auth
@@ -350,6 +362,11 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
+      SMTP_HOST: "mailcatcher"
+      SMTP_PORT: "1025"
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
     <<: *build
     restart: always
     depends_on:
