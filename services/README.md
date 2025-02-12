@@ -19,7 +19,7 @@ To evaluate how much of the code is covered by tests, we utilize coverage report
 ### Important Note
 Tests can only be run in ```local``` and ```staging``` environments. Ensure you are in the appropriate environment before attempting to run the tests to avoid unexpected behavior.
 
-## Versioning
+## API Versioning
 In this project, we have adopted a versioning strategy for our services to ensure smooth upgrades and backward compatibility for both the development and production environments. The versioning system is designed to provide clear separation between different API versions while also offering flexibility for continuous development and deployment. Below is a breakdown of how the versioning system works:
 
 ### Overview
@@ -55,7 +55,7 @@ To create a new version for a desired service while ensuring backward compatibil
   3. Update the latest version router (e.g. ```app.include_router(v1_router)``` to ```app.include_router(v2_router)```)
 
 
-### Database Migrations
+## Database Migrations
 This project uses Alembic for database migrations, allowing you to manage changes to your database schema easily.
 
 Follow these steps to make database schema changes for the desired service:
@@ -93,7 +93,33 @@ docker compose exec -t auth-service bash scripts/lint.sh
 Keep in mind these checks will also be done when pushing to the main branch.
 
 
+## Service Uniformity
+In this project, it is essential to maintain consistent naming conventions for all services, Docker containers, and configuration variables. Adhering to these standards ensures uniformity and easier management across the entire system.
+
+### Service Folder Naming
+* Every service folder in the ```services/``` directory must be named according to the service's core functionality, using lowercase letters.
+* Example: The authentication service should be named ```auth```.
+
+### Docker Container Naming
+* When creating the Docker container for each service, it should be named in the following pattern: ```{service-name}-service```.
+* For example: the authentication service would be named ```auth-service```
+
+### Environment Variables
+* The ```.env``` file will define most of the environment variables used for local development and production. However, some variables are service-specific in ```docker-compose.yml```. For example, each service must pass the environment variable ```MYSQL_DATABASE``` for database configuration. Ensure that the value of ```MYSQL_DATABASE``` corresponds to the service being developed.
+* Example in docker-compose.yml for the ```auth``` service:
+```
+services:
+  auth-service:
+    environment:
+      MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
+```
+### Other Configurations
+* In the src/core/config.py file, there is a critical variable called ```SERVICE_NAME```. This variable should always be updated to match the name of the service (e.g. for the ```auth``` service: ```SERVICE_NAME: str = "auth"```).
+* Each service should contain a ```lint.sh``` and a ```tests-start.sh``` in the scripts folder, this ensures you are able to run the global ```scripts/test.sh``` and ```scripts/lint.sh``` files for testing/linting all services (also used for github actions on commit).
+
+
 ## More to come
-* Services folder creation (has to match docker containers ({SERVICE}-service naming scheme), contain lint.sh and tests-start.sh in scripts folder, etc.)
 * Current user dependency for services (different from auth and users, separate dependency for TokenData (userid,role))
 * Discuss a little about roles and how to uniformly make them across all services
+* RabbitMQ and how services send and receive events to communicate.
+
