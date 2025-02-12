@@ -32,6 +32,7 @@ dependencies = [
     "aiomysql>=0.2.0",
     "faststream[rabbit]>=0.5.33",
     "itsdangerous>=2.2.0",
+    "celery>=5.4.0",
 ]
 
 [tool.uv]

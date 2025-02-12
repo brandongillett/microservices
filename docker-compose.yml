@@ -375,6 +375,38 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-emails-http.rule=Host(`emails.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-emails-http.entrypoints=http
 
+  emails-worker:
+    build:
+      context: ./services/emails
+    command: celery -A src.tasks.c_app worker --loglevel=INFO
+    develop:
+      watch:
+        - path: ./services/emails
+          action: sync
+          target: /app
+          ignore:
+            - src/alembic
+            - htmlcov
+            - libs
+            - .venv
+        - path: ./services/emails/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./libs:/app/libs
+      - ./services/emails/htmlcov:/app/htmlcov
+      - ./services/emails/src/alembic:/app/src/alembic
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
+    <<: *build
+    restart: always
+    depends_on:
+      emails-service:
+        condition: service_healthy
+        restart: true
+    networks:
+      - default
+
   tasks-service:
     build:
       context: ./services/tasks
