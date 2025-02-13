@@ -1,12 +1,14 @@
-from celery import Celery
+from celery import Celery  # type: ignore
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
 
-c_app = Celery("tasks", broker=utils_lib_settings.REDIS_URL)
+c_app = Celery(
+    "tasks", broker=utils_lib_settings.REDIS_URL, backend=utils_lib_settings.REDIS_URL
+)
 
 
-@c_app.task
-def send_email(email: str, subject: str, message: str) -> None:
+@c_app.task  # type: ignore
+def send_email(email: str, subject: str, message: str) -> str:
     """
     Sends an email.
 
@@ -15,4 +17,4 @@ def send_email(email: str, subject: str, message: str) -> None:
         subject (str): The subject of the email.
         message (str): The message to send.
     """
-    print(f"Sending email to {email} with subject {subject} and message {message}.")
+    return f"Sending email to {email} with subject {subject} and message {message}."

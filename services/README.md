@@ -122,4 +122,3 @@ services:
 * Current user dependency for services (different from auth and users, separate dependency for TokenData (userid,role))
 * Discuss a little about roles and how to uniformly make them across all services
 * RabbitMQ and how services send and receive events to communicate.
-

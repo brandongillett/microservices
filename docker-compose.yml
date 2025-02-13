@@ -415,12 +415,22 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
-    <<: *build
+    platform: linux/amd64
+    env_file:
+      - .env
     restart: always
     depends_on:
-      emails-service:
+      mysql:
         condition: service_healthy
         restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+      prestart-emails:
+        condition: service_completed_successfully
     networks:
       - default
 
