@@ -12,6 +12,7 @@ class settings(BaseSettings):
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: str | None = None
+    EMAILS_FROM_NAME: str | None = None
 
 
 settings = settings()  # type: ignore

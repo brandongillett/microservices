@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete
@@ -11,9 +13,11 @@ from libs.utils_lib.api.events import (
     logger,
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
+from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.models import EventInbox, EventOutbox
 from src.crud import get_user_by_username, update_user_username, verify_user_email
 from src.models import UserEmails
+from src.tasks import send_email
 
 rabbit_router = RabbitRouter()
 
@@ -99,6 +103,17 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
         process_fn=process_create_user,
         data=data,
     )
+    try:
+        send_confirmation_email_event_id = uuid4()
+        send_confirmation_event_schema = CreateUserEvent(
+            event_id=send_confirmation_email_event_id, user=data.user
+        )
+
+        await rabbitmq.broker.publish(
+            send_confirmation_event_schema, queue="emails_service_send_confirmation"
+        )
+    except Exception as e:
+        logger.error(f"Failed to send confirmation email: {e}")
 
 
 @rabbit_router.subscriber(
@@ -171,4 +186,25 @@ async def verify_user_event(session: async_session_dep, data: VerifyUserEvent) -
         event_type="emails_service_verify_user",
         process_fn=process_verify_user_event,
         data=data,
+    )
+
+
+@rabbit_router.subscriber(
+    RabbitQueue(name="emails_service_send_confirmation", durable=True)
+)
+async def send_confirmation_event(data: CreateUserEvent) -> None:
+    """
+    Subscribes to an event to send a confirmation email.
+
+    Args:
+        data: The event containing the user details to be sent a confirmation email.
+    """
+    html = ""
+    with open("src/email-templates/email-confirmation.html") as file:
+        html = file.read()
+
+    send_email.delay(
+        email_to=data.user.email,
+        subject=f"{utils_lib_settings.PROJECT_NAME} Email Confirmation",
+        html=html,
     )

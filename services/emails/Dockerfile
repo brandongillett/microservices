@@ -28,4 +28,8 @@ COPY ./src /app/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
 
+RUN useradd -ms /bin/bash celery
+
+RUN chown -R celery:celery /app
+
 CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
