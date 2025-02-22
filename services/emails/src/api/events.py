@@ -1,11 +1,10 @@
-from uuid import uuid4
-
 from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
 from faststream.rabbit.fastapi import RabbitRouter
 from sqlmodel import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEvent
+from libs.auth_lib.utils import gen_email_verification_token
 from libs.users_lib.schemas import UpdateUserUsernameEvent
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.api.events import (
@@ -18,6 +17,7 @@ from libs.utils_lib.models import EventInbox, EventOutbox
 from src.crud import get_user_by_username, update_user_username, verify_user_email
 from src.models import UserEmails
 from src.tasks import send_email
+from src.utils import render_email_template
 
 rabbit_router = RabbitRouter()
 
@@ -104,16 +104,11 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
         data=data,
     )
     try:
-        send_confirmation_email_event_id = uuid4()
-        send_confirmation_event_schema = CreateUserEvent(
-            event_id=send_confirmation_email_event_id, user=data.user
-        )
-
         await rabbitmq.broker.publish(
-            send_confirmation_event_schema, queue="emails_service_send_confirmation"
+            data.user, queue="emails_service_send_verification"
         )
     except Exception as e:
-        logger.error(f"Failed to send confirmation email: {e}")
+        logger.error(f"Failed to send verification email: {e}")
 
 
 @rabbit_router.subscriber(
@@ -190,21 +185,29 @@ async def verify_user_event(session: async_session_dep, data: VerifyUserEvent) -
 
 
 @rabbit_router.subscriber(
-    RabbitQueue(name="emails_service_send_confirmation", durable=True)
+    RabbitQueue(name="emails_service_send_verification", durable=True)
 )
-async def send_confirmation_event(data: CreateUserEvent) -> None:
+async def send_verification_event(user: UserEmails) -> None:
     """
-    Subscribes to an event to send a confirmation email.
+    Subscribes to an event to send a verification email.
 
     Args:
-        data: The event containing the user details to be sent a confirmation email.
+        data: The user to send the verification email to.
     """
-    html = ""
-    with open("src/email-templates/email-confirmation.html") as file:
-        html = file.read()
+    verification_token = gen_email_verification_token(user.id)
+
+    context = {
+        "project_name": utils_lib_settings.PROJECT_NAME,
+        "username": user.username,
+        "verification_link": f"http://auth.localhost/verification/email/{verification_token}",
+    }
+    html = render_email_template(
+        template_name="email_verification.html",
+        context=context,
+    )
 
     send_email.delay(
-        email_to=data.user.email,
-        subject=f"{utils_lib_settings.PROJECT_NAME} Email Confirmation",
+        email_to=user.email,
+        subject="Verify Email Address",
         html=html,
     )

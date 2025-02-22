@@ -5,7 +5,10 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from src.core.config import settings
 
 c_app = Celery(
-    "tasks", broker=utils_lib_settings.REDIS_URL, backend=utils_lib_settings.REDIS_URL
+    "tasks",
+    broker=utils_lib_settings.REDIS_URL,
+    backend=utils_lib_settings.REDIS_URL,
+    broker_connection_retry_on_startup=True,
 )
 
 
@@ -22,7 +25,7 @@ def send_email(email_to: str, subject: str, html: str) -> str:
     message = emails.Message(
         subject=subject,
         html=html,
-        mail_from=(settings.EMAILS_FROM_NAME, settings.EMAILS_FROM_EMAIL),
+        mail_from=(utils_lib_settings.PROJECT_NAME, settings.EMAILS_FROM_EMAIL),
     )
     smtp_options = {"host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
     if settings.SMTP_TLS:
