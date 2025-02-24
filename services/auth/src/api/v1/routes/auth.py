@@ -18,6 +18,7 @@ from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_usernam
 from libs.users_lib.schemas import UserPublic
 from libs.utils_lib.api.deps import async_session_dep, client_ip_dep
 from libs.utils_lib.api.events import handle_publish_event
+from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.security import rate_limiter
 from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.schemas import Message
@@ -197,13 +198,20 @@ async def login(
             detail=invalid_message,
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Reset the number of failed login attempts
+    await reset_login_attempts(form_data.username)
+
     if user.disabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
 
-    # Reset the number of failed login attempts
-    await reset_login_attempts(form_data.username)
+    if utils_lib_settings.REQUIRE_USER_VERIFICATION and not user.verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not verified",
+        )
 
     current_time = datetime.utcnow()
 
@@ -211,7 +219,9 @@ async def login(
     access_token_expires = current_time + timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    access_token_data = TokenData(user_id=user.id, role=user.role, type="access")
+    access_token_data = TokenData(
+        user_id=user.id, role=user.role, verified=user.verified, type="access"
+    )
     access_token, _ = gen_token(
         data=access_token_data,
         expire=access_token_expires,
@@ -221,7 +231,9 @@ async def login(
     refresh_token_expires = current_time + timedelta(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
-    refresh_token_data = TokenData(user_id=user.id, role=user.role, type="refresh")
+    refresh_token_data = TokenData(
+        user_id=user.id, role=user.role, verified=user.verified, type="refresh"
+    )
     refresh_token, refresh_jti = gen_token(
         data=refresh_token_data,
         expire=refresh_token_expires,
@@ -309,7 +321,9 @@ async def refresh_access_token(
     access_token_expires = current_time + timedelta(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    access_token_data = TokenData(user_id=user.id, role=user.role, type="access")
+    access_token_data = TokenData(
+        user_id=user.id, role=user.role, verified=user.verified, type="access"
+    )
     access_token, _ = gen_token(
         data=access_token_data,
         expire=access_token_expires,
@@ -319,7 +333,9 @@ async def refresh_access_token(
     refresh_token_expires = current_time + timedelta(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
-    refresh_token_data = TokenData(user_id=user.id, role=user.role, type="refresh")
+    refresh_token_data = TokenData(
+        user_id=user.id, role=user.role, verified=user.verified, type="refresh"
+    )
     refresh_token, refresh_jti = gen_token(
         data=refresh_token_data,
         expire=refresh_token_expires,

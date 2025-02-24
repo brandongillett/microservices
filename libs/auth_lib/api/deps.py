@@ -52,6 +52,7 @@ async def get_token_data(
         )
         user_id: UUID = payload.get("user_id")
         role: str = payload.get("role")
+        verified: bool = payload.get("verified")
         type: str = payload.get("type")
 
         if not user_id:
@@ -63,7 +64,7 @@ async def get_token_data(
                 detail="Invalid token type",
             )
 
-        token_data = TokenData(user_id=user_id, role=role, type=type)
+        token_data = TokenData(user_id=user_id, role=role, verified=verified, type=type)
 
         return token_data
 
@@ -145,6 +146,11 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     async def __call__(self, token_data: current_user_token_data) -> Any:
+        if settings.REQUIRE_USER_VERIFICATION and not token_data.verified:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not verified",
+            )
         if token_data.role in self.allowed_roles:
             return True
 

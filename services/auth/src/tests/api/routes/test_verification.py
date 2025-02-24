@@ -1,14 +1,25 @@
 import pytest
 from httpx import AsyncClient
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.utils import gen_email_verification_token
-from libs.utils_lib.tests.utils.utils import create_and_login_user_helper
+from libs.users_lib.models import Users
+from libs.utils_lib.tests.utils.utils import (
+    random_email,
+    random_lower_string,
+    test_password,
+)
 
 
 @pytest.mark.anyio
-async def test_verify_email(db: AsyncSession, client: AsyncClient) -> None:
-    _, new_user = await create_and_login_user_helper(db, client)
+async def test_verify_email(client: AsyncClient) -> None:
+    username = random_lower_string()
+    email = random_email()
+
+    create_response = await client.post(
+        "/auth/register",
+        json={"username": username, "email": email, "password": test_password},
+    )
+    new_user = Users(**create_response.json())
 
     token = gen_email_verification_token(new_user.id)
 

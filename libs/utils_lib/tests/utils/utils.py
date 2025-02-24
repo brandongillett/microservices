@@ -6,6 +6,7 @@ from uuid import UUID
 from httpx import AsyncClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.auth_lib.utils import gen_email_verification_token
 from libs.users_lib.models import Users
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
@@ -37,6 +38,14 @@ async def create_and_login_user_helper(
     new_user = Users(**create_response.json())
 
     await db.commit()
+
+    verification_token = gen_email_verification_token(new_user.id)
+
+    verification_response = await client.get(
+        f"/verification/email/{verification_token}"
+    )
+
+    assert verification_response.status_code == 200
 
     login_response = await client.post(
         "/auth/login",

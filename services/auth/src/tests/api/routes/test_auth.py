@@ -25,7 +25,10 @@ async def test_login(db: AsyncSession, client: AsyncClient) -> None:
     username = random_lower_string()
     email = random_email()
     user_data = UserCreate(username=username, email=email, password=test_password)
-    await create_user(session=db, user_create=user_data)
+    new_user = await create_user(session=db, user_create=user_data)
+
+    new_user.verified = True
+    await db.commit()
 
     login_data_username = {"username": username, "password": test_password}
     login_data_email = {"username": email, "password": test_password}
@@ -262,7 +265,10 @@ async def test_logout(db: AsyncSession, client: AsyncClient) -> None:
     username = random_lower_string()
     email = random_email()
     user_data = UserCreate(username=username, email=email, password=test_password)
-    await create_user(session=db, user_create=user_data)
+    new_user = await create_user(session=db, user_create=user_data)
+
+    new_user.verified = True
+    await db.commit()
 
     login_response = await client.post(
         "/auth/login",
@@ -296,6 +302,7 @@ async def test_logout_invalid_token(client: AsyncClient) -> None:
     token_data = TokenData(
         user_id=uuid4(),
         role="user",
+        verified=True,
         type="refresh",
     )
     random_token, _ = gen_token(
@@ -315,7 +322,10 @@ async def test_refresh_token(db: AsyncSession, client: AsyncClient) -> None:
     username = random_lower_string()
     email = random_email()
     user_data = UserCreate(username=username, email=email, password=test_password)
-    await create_user(session=db, user_create=user_data)
+    new_user = await create_user(session=db, user_create=user_data)
+
+    new_user.verified = True
+    await db.commit()
 
     login_response = await client.post(
         "/auth/login",
@@ -346,6 +356,7 @@ async def test_refresh_token_invalid_token(client: AsyncClient) -> None:
     token_data = TokenData(
         user_id=uuid4(),
         role="user",
+        verified=True,
         type="refresh",
     )
     random_token, _ = gen_token(
@@ -369,7 +380,8 @@ async def test_refresh_token_not_in_db(db: AsyncSession, client: AsyncClient) ->
 
     token_data = TokenData(
         user_id=user.id,
-        role="user",
+        role=user.role,
+        verified=user.verified,
         type="refresh",
     )
     refresh_token, _ = gen_token(

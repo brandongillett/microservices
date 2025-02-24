@@ -11,6 +11,7 @@ from libs.utils_lib.schemas import EventMessageBase
 class TokenData(SQLModel):
     user_id: UUID
     role: str
+    verified: bool
     type: Literal["access", "refresh"]
 
 

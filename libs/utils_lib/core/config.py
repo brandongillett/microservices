@@ -15,6 +15,9 @@ class settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ROOT_USER_PASSWORD: str
 
+    # Auth settings
+    REQUIRE_USER_VERIFICATION: bool = True
+
     # MySQL settings
     MYSQL_SERVER: str
     MYSQL_DATABASE: str
