@@ -50,6 +50,23 @@ async def test_login(db: AsyncSession, client: AsyncClient) -> None:
 
 
 @pytest.mark.anyio
+async def test_login_not_verified(db: AsyncSession, client: AsyncClient) -> None:
+    username = random_lower_string()
+    email = random_email()
+    user_data = UserCreate(username=username, email=email, password=test_password)
+    await create_user(session=db, user_create=user_data)
+
+    login_data_username = {"username": username, "password": test_password}
+    login_data_email = {"username": email, "password": test_password}
+
+    response_username = await client.post("/auth/login", data=login_data_username)
+    response_email = await client.post("/auth/login", data=login_data_email)
+
+    assert response_username.status_code == 401
+    assert response_email.status_code == 401
+
+
+@pytest.mark.anyio
 async def test_login_incorrect(db: AsyncSession, client: AsyncClient) -> None:
     username = random_lower_string()
     email = random_email()
