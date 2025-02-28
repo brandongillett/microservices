@@ -4,12 +4,9 @@ from celery import Celery  # type: ignore
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from src.core.config import settings
 
-c_app = Celery(
-    "tasks",
-    broker=utils_lib_settings.REDIS_URL,
-    backend=utils_lib_settings.REDIS_URL,
-    broker_connection_retry_on_startup=True,
-)
+c_app = Celery()
+
+c_app.config_from_object("libs.utils_lib.core.celery")
 
 
 @c_app.task  # type: ignore
