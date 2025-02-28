@@ -7,8 +7,11 @@
 <h3 align=center>Local Endpoints (Default)</h3>
 
 <h4 align="center">
-  Traefik Dashboard: <a href="http://traefik.localhost/">http://traefik.localhost/</a><br>
+  Frontend: <a href="http://localhost/">http://localhost/</a><br>
   Adminer: <a href="http://adminer.localhost/">http://adminer.localhost/</a><br>
+  RabbitMQ: <a href="http://rabbitmq.localhost/">http://rabbitmq.localhost/</a><br>
+  MailCatcher: <a href="http://mailcatcher.localhost/">http://mailcatcher.localhost/</a><br>
+  Traefik Dashboard: <a href="http://traefik.localhost/">http://traefik.localhost/</a><br>
   Backend: <a href="http://auth.localhost/">http://{SERVICE}.localhost/ (e.g. http://auth.localhost/)</a><br>
   Backend (Docs): <a href="http://auth.localhost/docs">http://{SERVICE}.localhost/docs (e.g. http://auth.localhost/docs)</a><br>
   Backend (Redoc): <a href="http://auth.localhost/redoc ">http://{SERVICE}.localhost/redoc (e.g. http://auth.localhost/redoc)</a><br>
