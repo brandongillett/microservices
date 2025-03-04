@@ -3,7 +3,7 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore
 from apscheduler.triggers.cron import CronTrigger  # type: ignore
 from apscheduler.triggers.interval import IntervalTrigger  # type: ignore
-from pytz import UTC
+from pytz import UTC  # type: ignore
 
 from libs.utils_lib.core.rabbitmq import rabbitmq
 
@@ -26,7 +26,6 @@ async def send_rabbitmq_event(job_name: str) -> None:
     """Publish a RabbitMQ message for a given job."""
     try:
         await rabbitmq.broker.publish(exchange=job_name)
-        logger.info(f"Successfully sent RabbitMQ event for job: {job_name}")
     except Exception as e:
         logger.error(f"Failed to send RabbitMQ event for job {job_name}: {e}")
 
