@@ -30,10 +30,10 @@ dependencies = [
     "aioredis>=2.0.1",
     "pytest>=7.4.4",
     "aiomysql>=0.2.0",
-    "faststream[rabbit]>=0.5.33",
     "itsdangerous>=2.2.0",
     "apscheduler>=3.11.0",
     "pytz>=2025.1",
+    "faststream[rabbit]>=0.5.37",
 ]
 
 [tool.uv]
