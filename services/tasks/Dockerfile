@@ -30,6 +30,4 @@ COPY --chown=appuser:appuser ./src /app/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
 
-USER appuser
-
 CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
