@@ -14,9 +14,9 @@ from libs.utils_lib.api.events import (
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.models import EventInbox, EventOutbox
+from src.celery_tasks import send_email
 from src.crud import get_user_by_username, update_user_username, verify_user_email
 from src.models import UserEmails
-from src.tasks import send_email
 from src.utils import render_email_template
 
 rabbit_router = RabbitRouter()

@@ -10,9 +10,9 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
-from src.api.tasks import start_task_scheduler, stop_task_scheduler
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
+from src.tasks import start_task_scheduler, stop_task_scheduler
 
 
 class app_settings(BaseSettings):

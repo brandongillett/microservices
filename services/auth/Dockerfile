@@ -19,13 +19,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ENV PYTHONPATH=/app
 
-RUN useradd -ms /bin/bash celery
+RUN useradd -ms /bin/bash appuser
 
-COPY --chown=celery:celery ./scripts /app/scripts
+COPY --chown=appuser:appuser ./scripts /app/scripts
 
-COPY --chown=celery:celery ./pyproject.toml ./uv.lock ./alembic.ini /app/
+COPY --chown=appuser:appuser ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
-COPY --chown=celery:celery ./src /app/src
+COPY --chown=appuser:appuser ./src /app/src
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync

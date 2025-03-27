@@ -417,7 +417,7 @@ services:
   emails-worker:
     build:
       context: ./services/emails
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.tasks.c_app worker --loglevel=INFO --uid celery
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --loglevel=INFO --uid appuser
     develop:
       watch:
         - path: ./services/emails
