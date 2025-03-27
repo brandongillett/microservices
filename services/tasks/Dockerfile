@@ -1,10 +1,10 @@
-FROM python:3.10
+FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app/
 
-COPY --from=ghcr.io/astral-sh/uv:0.4.15 /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
 ENV PATH="/app/.venv/bin:$PATH"
 
@@ -19,11 +19,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ENV PYTHONPATH=/app
 
-COPY ./scripts /app/scripts
+RUN useradd -ms /bin/bash celery
 
-COPY ./pyproject.toml ./uv.lock /app/
+COPY --chown=celery:celery ./scripts /app/scripts
 
-COPY ./src /app/src
+COPY --chown=celery:celery ./pyproject.toml ./uv.lock /app/
+
+COPY --chown=celery:celery ./src /app/src
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync

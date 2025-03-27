@@ -25,7 +25,7 @@ update_package() {
     local service_dir="$2"
 
     service_name=$(basename "$service_dir")
-    
+
     if is_package_in_dependencies "$package_name" "$service_dir"; then
         echo -e "${CYAN}Updating package $package_name in $service_name...${NC}"
         uv remove "$package_name" > /dev/null 2>&1 && uv add "$package_name" > /dev/null 2>&1
@@ -39,7 +39,7 @@ add_package() {
     local package_name="$1"
     local service_dir="$2"
     service_name=$(basename "$service_dir")
-    
+
     echo -e "${CYAN}Adding package $package_name in $service_name...${NC}"
     uv add "$package_name" > /dev/null 2>&1
 }
@@ -53,13 +53,13 @@ process_services() {
         service_name=$(basename "$service_dir")
 
         cd "$service_dir"
-        
+
         if [ "$action" = "add" ]; then
             add_package "$package_name" "$service_dir"
         elif [ "$action" = "update" ]; then
             update_package "$package_name" "$service_dir"
         fi
-        
+
         cd - > /dev/null 2>&1
     done
 }
