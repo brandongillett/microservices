@@ -23,7 +23,7 @@ RUN useradd -ms /bin/bash appuser
 
 COPY --chown=appuser:appuser ./scripts /app/scripts
 
-COPY --chown=appuser:appuser ./pyproject.toml ./uv.lock /app/
+COPY --chown=appuser:appuser ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 COPY --chown=appuser:appuser ./src /app/src
 

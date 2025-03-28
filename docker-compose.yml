@@ -248,6 +248,7 @@ services:
       - ./libs:/app/libs
     environment:
       <<: *environment-vars
+      MYSQL_DATABASE: ${TASKS_DATABASE?Variable not set}
     <<: *build
 
   auth-service:
@@ -471,6 +472,7 @@ services:
           action: sync
           target: /app
           ignore:
+            - src/alembic
             - htmlcov
             - libs
             - .venv
@@ -481,6 +483,7 @@ services:
       - ./services/tasks/htmlcov:/app/htmlcov
     environment:
       <<: *environment-vars
+      MYSQL_DATABASE: ${TASKS_DATABASE?Variable not set}
     <<: *build
     restart: always
     depends_on:
