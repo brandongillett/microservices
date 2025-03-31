@@ -1,18 +1,6 @@
 x-environment-vars: &environment-vars
-  DOMAIN: ${DOMAIN?Variable not set}
-  ENVIRONMENT: ${ENVIRONMENT?Variable not set}
-  PROJECT_NAME: ${PROJECT_NAME?Variable not set}
-  FRONTEND_HOST: ${FRONTEND_HOST?Variable not set}
-  SECRET_KEY: ${SECRET_KEY?Variable not set}
-  ROOT_USER_PASSWORD: ${ROOT_USER_PASSWORD?Variable not set}
-  MYSQL_SERVER: ${MYSQL_SERVER?Variable not set}
   MYSQL_USER: ${MYSQL_CURRENT_USER?Variable not set}
   MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD?Variable not set}
-  REDIS_URL: ${REDIS_URL?Variable not set}
-  RABBITMQ_SERVER: ${RABBITMQ_SERVER?Variable not set}
-  RABBITMQ_PORT: ${RABBITMQ_PORT?Variable not set}
-  RABBITMQ_USER: ${RABBITMQ_USER?Variable not set}
-  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD?Variable not set}
 
 x-build: &build
   platform: linux/amd64
@@ -177,6 +165,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
+      REDIS_URL: ${AUTH_REDIS_URL?Variable not set}
     <<: *build
 
   prestart-users:
@@ -201,6 +190,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${USERS_DATABASE?Variable not set}
+      REDIS_URL: ${USERS_REDIS_URL?Variable not set}
     <<: *build
 
   prestart-emails:
@@ -225,6 +215,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
+      REDIS_URL: ${EMAILS_REDIS_URL?Variable not set}
     <<: *build
 
   prestart-tasks:
@@ -279,6 +270,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
+      REDIS_URL: ${AUTH_REDIS_URL?Variable not set}
     <<: *build
     restart: always
     depends_on:
@@ -303,6 +295,49 @@ services:
       - traefik.http.services.${STACK_NAME?Variable not set}-auth.loadbalancer.server.port=8000
       - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.rule=Host(`auth.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-auth-http.entrypoints=http
+
+  auth-worker:
+    build:
+      context: ./services/auth
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
+    develop:
+      watch:
+        - path: ./services/auth
+          action: sync
+          target: /app
+          ignore:
+            - src/alembic
+            - htmlcov
+            - libs
+            - .venv
+        - path: ./services/auth/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./libs:/app/libs
+      - ./services/auth/htmlcov:/app/htmlcov
+      - ./services/auth/src/alembic:/app/src/alembic
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
+      REDIS_URL: ${AUTH_REDIS_URL?Variable not set}
+    platform: linux/amd64
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+      prestart-auth:
+        condition: service_completed_successfully
+    networks:
+      - default
 
   users-service:
     build:
@@ -332,6 +367,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${USERS_DATABASE?Variable not set}
+      REDIS_URL: ${USERS_REDIS_URL?Variable not set}
     <<: *build
     restart: always
     depends_on:
@@ -356,6 +392,49 @@ services:
       - traefik.http.services.${STACK_NAME?Variable not set}-users.loadbalancer.server.port=8000
       - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.rule=Host(`users.${DOMAIN?Variable not set}`)
       - traefik.http.routers.${STACK_NAME?Variable not set}-users-http.entrypoints=http
+
+  users-worker:
+    build:
+      context: ./services/users
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
+    develop:
+      watch:
+        - path: ./services/users
+          action: sync
+          target: /app
+          ignore:
+            - src/alembic
+            - htmlcov
+            - libs
+            - .venv
+        - path: ./services/users/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./libs:/app/libs
+      - ./services/users/htmlcov:/app/htmlcov
+      - ./services/users/src/alembic:/app/src/alembic
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${USERS_DATABASE?Variable not set}
+      REDIS_URL: ${USERS_REDIS_URL?Variable not set}
+    platform: linux/amd64
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+      prestart-users:
+        condition: service_completed_successfully
+    networks:
+      - default
 
   emails-service:
     build:
@@ -385,11 +464,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
-      SMTP_HOST: "mailcatcher"
-      SMTP_PORT: "1025"
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      EMAILS_FROM_EMAIL: ${EMAILS_FROM_EMAIL}
+      REDIS_URL: ${EMAILS_REDIS_URL?Variable not set}
     <<: *build
     restart: always
     depends_on:
@@ -418,7 +493,7 @@ services:
   emails-worker:
     build:
       context: ./services/emails
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --loglevel=INFO --uid appuser
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
     develop:
       watch:
         - path: ./services/emails
@@ -438,6 +513,7 @@ services:
     environment:
       <<: *environment-vars
       MYSQL_DATABASE: ${EMAILS_DATABASE?Variable not set}
+      REDIS_URL: ${EMAILS_REDIS_URL?Variable not set}
     platform: linux/amd64
     env_file:
       - .env

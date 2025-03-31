@@ -2,6 +2,10 @@ FROM python:3.10
 
 ENV PYTHONUNBUFFERED=1
 
+RUN useradd -ms /bin/bash appuser
+
+USER appuser
+
 WORKDIR /app/
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
@@ -18,8 +22,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
 ENV PYTHONPATH=/app
-
-RUN useradd -ms /bin/bash appuser
 
 COPY --chown=appuser:appuser ./scripts /app/scripts
 
