@@ -299,7 +299,7 @@ services:
   auth-worker:
     build:
       context: ./services/auth
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO --uid appuser
     develop:
       watch:
         - path: ./services/auth
@@ -396,7 +396,7 @@ services:
   users-worker:
     build:
       context: ./services/users
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO --uid appuser
     develop:
       watch:
         - path: ./services/users
@@ -493,7 +493,7 @@ services:
   emails-worker:
     build:
       context: ./services/emails
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO
+    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO --uid appuser
     develop:
       watch:
         - path: ./services/emails

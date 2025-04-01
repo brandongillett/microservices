@@ -4,9 +4,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN useradd -ms /bin/bash appuser
 
-USER appuser
-
 WORKDIR /app/
+
+RUN chown appuser:appuser /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 

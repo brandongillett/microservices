@@ -4,9 +4,9 @@ ENV PYTHONUNBUFFERED=1
 
 RUN useradd -ms /bin/bash appuser
 
-USER appuser
-
 WORKDIR /app/
+
+RUN chown appuser:appuser /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
@@ -31,7 +31,5 @@ COPY --chown=appuser:appuser ./src /app/src
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
-
-ENTRYPOINT ["sh", "-c", "chown appuser:appuser /app/htmlcov"]
 
 CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
