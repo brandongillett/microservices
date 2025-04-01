@@ -6,9 +6,9 @@ RUN useradd -ms /bin/bash appuser
 
 USER appuser
 
-RUN mkdir htmlcov
-
 WORKDIR /app/
+
+RUN mkdir -p /app/htmlcov
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 

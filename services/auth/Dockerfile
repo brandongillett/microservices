@@ -8,7 +8,7 @@ USER appuser
 
 WORKDIR /app/
 
-RUN mkdir htmlcov
+RUN mkdir -p /app/htmlcov
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
