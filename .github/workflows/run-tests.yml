@@ -16,7 +16,7 @@ jobs:
       - name: Debug Output
         run: |
           echo "Checking file permissions in /app/htmlcov"
-          ls -al /app/htmlcov
+          ls -al /app
           echo "Checking user info"
           id appuser
           echo "Current working directory"
