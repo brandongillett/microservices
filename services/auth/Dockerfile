@@ -8,8 +8,6 @@ USER appuser
 
 WORKDIR /app/
 
-RUN mkdir -p /app/htmlcov
-
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
 ENV PATH="/app/.venv/bin:$PATH"

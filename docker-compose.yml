@@ -245,6 +245,7 @@ services:
   auth-service:
     build:
       context: ./services/auth
+    user: "appuser:appuser"
     command:
       - fastapi
       - run
