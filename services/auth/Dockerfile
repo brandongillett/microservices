@@ -32,4 +32,6 @@ COPY --chown=appuser:appuser ./src /app/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
 
+ENTRYPOINT ["sh", "-c", "chown appuser:appuser /app/htmlcov"]
+
 CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
