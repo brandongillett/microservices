@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Debug Output
         run: |
+          echo "Current directory"
+          ls -al
           docker compose build
           docker compose up -d
           echo "Listing files in the current directory"
