@@ -23,6 +23,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ENV PYTHONPATH=/app
 
+RUN mkdir -p /app/htmlcov && chown appuser:appuser /app/htmlcov
+
 COPY --chown=appuser:appuser ./scripts /app/scripts
 
 COPY --chown=appuser:appuser ./pyproject.toml ./uv.lock ./alembic.ini /app/
