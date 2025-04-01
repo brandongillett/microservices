@@ -15,21 +15,4 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Debug Output
-        run: |
-          echo "Current directory"
-          ls -al
-          docker compose build
-          docker compose up -d
-          echo "Listing files in the current directory"
-          docker compose exec -t auth-service ls -al
-          echo "Listing files in the htmlcov directory"
-          docker compose exec -t auth-service ls -al /app/htmlcov
-          echo "Current user"
-          docker compose exec -t auth-service whoami
-          echo "Trying to create a file in htmlcov"
-          docker compose exec -t auth-service touch /app/htmlcov/testfile
-
-      # - name: Checkout
-      #   uses: actions/checkout@v4
-      # - run: bash scripts/test.sh
+      - run: bash scripts/test.sh

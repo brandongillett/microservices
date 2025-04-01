@@ -4,6 +4,8 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app/
 
+RUN mkdir htmlcov
+
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
 ENV PATH="/app/.venv/bin:$PATH"
@@ -20,8 +22,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ENV PYTHONPATH=/app
 
 RUN useradd -ms /bin/bash appuser
-
-RUN mkdir -p /app/htmlcov && chown appuser:appuser /app/htmlcov
 
 COPY --chown=appuser:appuser ./scripts /app/scripts
 

@@ -6,6 +6,8 @@ RUN useradd -ms /bin/bash appuser
 
 USER appuser
 
+RUN mkdir htmlcov
+
 WORKDIR /app/
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
@@ -22,8 +24,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
 ENV PYTHONPATH=/app
-
-RUN mkdir -p /app/htmlcov && chown appuser:appuser /app/htmlcov
 
 COPY --chown=appuser:appuser ./scripts /app/scripts
 
