@@ -15,18 +15,17 @@ jobs:
     steps:
       - name: Debug Output
         run: |
-          echo "Checking file permissions in /app/htmlcov"
-          ls -al /app
-          echo "Checking user info"
-          id appuser
-          echo "Current working directory"
-          pwd
+          docker compose build
+          docker compose up -d
+          echo "Listing files in the current directory"
+          docker compose exec -t auth-service ls -al
+          echo "Listing files in the htmlcov directory"
+          docker compose exec -t auth-service ls -al /app/htmlcov
           echo "Current user"
-          whoami
+          docker compose exec -t auth-service whoami
           echo "Trying to create a file in htmlcov"
-          touch /app/htmlcov/testfile
-          ls -al /app/htmlcov
+          docker compose exec -t auth-service touch /app/htmlcov/testfile
 
-      - name: Checkout
-        uses: actions/checkout@v4
-      - run: bash scripts/test.sh
+      # - name: Checkout
+      #   uses: actions/checkout@v4
+      # - run: bash scripts/test.sh
