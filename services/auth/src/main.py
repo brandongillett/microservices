@@ -16,7 +16,7 @@ from src.api import events
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
 from src.crud import create_root_user
-from src.tasks import schedule_tasks
+from src.tasks import schedule_jobs
 
 
 class app_settings(BaseSettings):
@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI) -> Any:
     await redis_client.connect()
     await rabbitmq.start()
     # Schedule tasks
-    await schedule_tasks()
+    await schedule_jobs()
 
     # Create root user
     if (

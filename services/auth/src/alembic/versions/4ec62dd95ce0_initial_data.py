@@ -1,8 +1,8 @@
 """initial data
 
-Revision ID: 515ab82223bc
-Revises:
-Create Date: 2025-01-21 21:47:57.738617
+Revision ID: 4ec62dd95ce0
+Revises: 
+Create Date: 2025-04-03 22:05:52.785370
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = '515ab82223bc'
+revision: str = '4ec62dd95ce0'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -43,6 +43,21 @@ def upgrade() -> None:
     sa.Column('error_message', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('jobs',
+    sa.Column('job_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('cron', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('interval', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('modified_at', sa.DateTime(), nullable=False),
+    sa.Column('last_run_status', sa.Enum('completed', 'failed', name='jobstatus'), nullable=True),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('id', sa.Uuid(), nullable=False),
+    sa.Column('schedule_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('last_run_error', sa.Text(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_jobs_job_name'), 'jobs', ['job_name'], unique=False)
+    op.create_index(op.f('ix_jobs_schedule_id'), 'jobs', ['schedule_id'], unique=True)
     op.create_table('users',
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(length=22), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -78,6 +93,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_jobs_schedule_id'), table_name='jobs')
+    op.drop_index(op.f('ix_jobs_job_name'), table_name='jobs')
+    op.drop_table('jobs')
     op.drop_table('eventoutbox')
     op.drop_table('eventinbox')
     # ### end Alembic commands ###

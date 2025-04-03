@@ -58,6 +58,35 @@ class RedisClient:
             raise RedisError("No active Redis client found.")
         return await self.client.ping()
 
+    async def acquire_lock(self, lock_name: str, expiration: int = 60) -> bool:
+        """
+        Acquire a lock in Redis.
+
+        Args:
+            lock_name (str): The name of the lock.
+            expiration (int): The expiration time for the lock in seconds.
+
+        Returns:
+            bool: True if the lock was acquired, False otherwise.
+        """
+        if not self.client:
+            raise RedisError("No active Redis client found.")
+
+        lock = await self.client.set(lock_name, "lock", nx=True, ex=expiration)
+
+        return lock is not None and lock
+
+    async def release_lock(self, lock_name: str) -> None:
+        """
+        Release a lock in Redis.
+
+        Args:
+            lock_name (str): The name of the lock.
+        """
+        if not self.client:
+            raise RedisError("No active Redis client found.")
+        await self.client.delete(lock_name)
+
     async def get_client(self) -> Redis:
         """
         Returns the Redis client, connecting if necessary.

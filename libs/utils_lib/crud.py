@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.utils_lib.models import EventInbox, EventOutbox, EventStatus
+from libs.utils_lib.models import EventInbox, EventOutbox, EventStatus, Jobs
 
 
 # CRUD operations for EventInbox
@@ -139,3 +139,57 @@ async def get_pending_outbox_events(
 
     result = await session.exec(stmt)
     return result.all()
+
+
+# CRUD operations for Tasks
+async def create_job(
+    session: AsyncSession,
+    schedule_id: str | None,
+    job_name: str,
+    cron: str | None = None,
+    interval: int | None = None,
+    commit: bool = True,
+) -> EventOutbox:
+    """
+    Create a job record.
+
+    Args:
+        session (AsyncSession): The database session.
+        schedule_id (str): The schedule ID.
+        job_name (str): The function name.
+        cron (str): The cron expression.
+        interval (int): The interval in seconds.
+        commit (bool): Commit at the end of the operation.
+
+    Returns:
+        EventOutbox: The job record.
+    """
+    job = Jobs(
+        schedule_id=schedule_id,
+        job_name=job_name,
+        cron=cron,
+        interval=interval,
+    )
+    session.add(job)
+
+    if commit:
+        await session.commit()
+        await session.refresh(job)
+
+    return job
+
+
+async def get_job_by_name(session: AsyncSession, job_name: str) -> Jobs | None:
+    """
+    Get a job record by name.
+
+    Args:
+        session (AsyncSession): The database session.
+        job_name (str): The job name.
+
+    Returns:
+        Jobs: The job record or None.
+    """
+    stmt = select(Jobs).where(Jobs.job_name == job_name)
+    result = await session.exec(stmt)
+    return result.one_or_none()
