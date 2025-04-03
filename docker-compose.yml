@@ -299,7 +299,50 @@ services:
   auth-worker:
     build:
       context: ./services/auth
-    command: watchmedo auto-restart --recursive -p '*.py' -- celery -A src.celery_tasks.c_app worker --beat --loglevel=INFO --uid appuser
+    command: watchmedo auto-restart --recursive -p '*.py' -- taskiq worker src.tasks:broker --log-level INFO
+    develop:
+      watch:
+        - path: ./services/auth
+          action: sync
+          target: /app
+          ignore:
+            - src/alembic
+            - htmlcov
+            - libs
+            - .venv
+        - path: ./services/auth/pyproject.toml
+          action: rebuild
+    volumes:
+      - ./libs:/app/libs
+      - ./services/auth/htmlcov:/app/htmlcov
+      - ./services/auth/src/alembic:/app/src/alembic
+    environment:
+      <<: *environment-vars
+      MYSQL_DATABASE: ${AUTH_DATABASE?Variable not set}
+      REDIS_URL: ${AUTH_REDIS_URL?Variable not set}
+    platform: linux/amd64
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_healthy
+        restart: true
+      rabbitmq:
+        condition: service_healthy
+        restart: true
+      prestart-auth:
+        condition: service_completed_successfully
+    networks:
+      - default
+
+  auth-scheduler:
+    build:
+      context: ./services/auth
+    command: watchmedo auto-restart --recursive -p '*.py' -- taskiq scheduler src.tasks:scheduler --log-level INFO
     develop:
       watch:
         - path: ./services/auth
