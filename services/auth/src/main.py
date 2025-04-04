@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI) -> Any:
     await session_manager.init_db()
     await redis_client.connect()
     await rabbitmq.start()
-    # Schedule tasks
+    # Schedule jobs
     await schedule_jobs()
 
     # Create root user

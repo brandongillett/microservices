@@ -149,7 +149,7 @@ async def create_job(
     cron: str | None = None,
     interval: int | None = None,
     commit: bool = True,
-) -> EventOutbox:
+) -> Jobs:
     """
     Create a job record.
 

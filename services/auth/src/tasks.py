@@ -1,3 +1,5 @@
+from typing import cast
+
 from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq_redis import RedisAsyncResultBackend, RedisScheduleSource, RedisStreamBroker
 
@@ -5,8 +7,13 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
-from libs.utils_lib.crud import create_job, get_job_by_name
-from libs.utils_lib.tasks import resend_outbox_events
+from libs.utils_lib.crud import get_job_by_name
+from libs.utils_lib.tasks import (
+    logger,
+    resend_outbox_events,
+    schedule_new_job,
+    update_existing_job,
+)
 
 result_backend = RedisAsyncResultBackend(utils_lib_settings.REDIS_URL)  # type: ignore
 
@@ -44,51 +51,64 @@ async def resend_outbox_events_task() -> None:
     await resend_outbox_events()
 
 
-#
 JOBS = {
     "resend_outbox_events": {
         "function": resend_outbox_events_task,
         "cron": "* * * * *",
     },
+    # "interval": {
+    #     "function": test_interval_task,
+    #     "interval": 5, # Executes in 5 minutes (One time)
+    # },
 }
 
 
 async def schedule_jobs() -> None:
     """
-    Schedule tasks to be executed.
+    Entry point to schedule all jobs.
     """
-    print("Attempting to schedule jobs...")
     async with session_manager.get_session() as session:
         for job_name, config in JOBS.items():
-            function = config["function"]
-            cron = config["cron"]
-            lock = await redis_client.acquire_lock(f"lock:{job_name}", expiration=20)
+            function = config.get("function")
+            interval = cast(int | None, config.get("interval"))
+            cron = cast(str | None, config.get("cron"))
+            if not function or (not interval and not cron):
+                logger.warning(f"Job {job_name} is misconfigured. Skipping.")
+                continue
 
-            if lock:
-                # Check if the job already exists in the database
-                job = await get_job_by_name(
+            lock_key = f"lock:{job_name}"
+
+            if not await redis_client.acquire_lock(lock_key, expiration=20):
+                continue
+
+            job = await get_job_by_name(session, job_name)
+            redis = await redis_client.get_client()
+
+            if job:
+                scheduled = await redis.exists(f"schedule:{job.schedule_id}")
+                if job.cron == cron and job.interval == interval and scheduled:
+                    logger.info(f"Job {job_name} already scheduled. Skipping...")
+                    await redis_client.release_lock(lock_key)
+                    continue
+                await update_existing_job(
                     session=session,
-                    job_name=job_name,
+                    job=job,
+                    function=function,
+                    cron=cron,
+                    interval=interval,
+                    redis_source=redis_source,
                 )
-                if job:
-                    print(
-                        f"Job {job_name} already exists in the database. Skipping creation."
-                    )
-                else:
-                    schedule = await function.schedule_by_cron(
-                        redis_source,
-                        cron,
-                    )
-                    job = await create_job(
-                        session=session,
-                        schedule_id=schedule.schedule_id,
-                        job_name=job_name,
-                        cron=cron,
-                    )
-
-                    # print(f"Scheduled task {job_name} with ID {task_id}")
+                logger.info(f"Job {job_name} updated.")
 
             else:
-                print(f"Lock already acquired for {job_name}. Skipping scheduling.")
+                await schedule_new_job(
+                    session=session,
+                    job_name=job_name,
+                    function=function,
+                    cron=cron,
+                    interval=interval,
+                    redis_source=redis_source,
+                )
+                logger.info(f"Job {job_name} scheduled.")
 
-            await redis_client.release_lock(f"lock:{job_name}")
+            await redis_client.release_lock(lock_key)
