@@ -38,8 +38,9 @@ class JobsBase(SQLModel):
     interval: int | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     modified_at: datetime = Field(default_factory=datetime.utcnow)
-    # next_run: datetime
-    # last_run: datetime | None = None
+    next_run: datetime
+    last_run: datetime | None = None
+    persistent: bool = Field(default=False)
     last_run_status: JobStatus | None = Field(default=None)
     enabled: bool = Field(default=True)
 
@@ -64,4 +65,5 @@ class Jobs(JobsBase, table=True):
         unique=True,
         index=True,
     )
+    ARGS: dict = Field(default={}, sa_column=Column(JSON))
     last_run_error: str | None = Field(default=None, sa_column=Column(Text))

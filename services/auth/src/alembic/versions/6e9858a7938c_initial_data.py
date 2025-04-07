@@ -1,8 +1,8 @@
 """initial data
 
-Revision ID: 4ec62dd95ce0
-Revises:
-Create Date: 2025-04-03 22:05:52.785370
+Revision ID: 6e9858a7938c
+Revises: 
+Create Date: 2025-04-07 17:32:34.723548
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = '4ec62dd95ce0'
+revision: str = '6e9858a7938c'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -49,10 +49,14 @@ def upgrade() -> None:
     sa.Column('interval', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('modified_at', sa.DateTime(), nullable=False),
+    sa.Column('next_run', sa.DateTime(), nullable=False),
+    sa.Column('last_run', sa.DateTime(), nullable=True),
+    sa.Column('persistent', sa.Boolean(), nullable=False),
     sa.Column('last_run_status', sa.Enum('completed', 'failed', name='jobstatus'), nullable=True),
     sa.Column('enabled', sa.Boolean(), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('schedule_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('ARGS', sa.JSON(), nullable=True),
     sa.Column('last_run_error', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )

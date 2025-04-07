@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.10, <4.0"
 resolution-markers = [
     "python_full_version < '3.13'",
@@ -463,6 +462,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/8f/c3/4fa1eb412bb288ff6bfcc163c11700ff06e02c5fad8513817186e460ed43/coverage-7.6.4-cp313-cp313t-win32.whl", hash = "sha256:b8d3a03d9bfcaf5b0141d07a88456bb6a4c3ce55c080712fec8418ef3610230e", size = 210353 },
     { url = "https://files.pythonhosted.org/packages/7e/77/03fc2979d1538884d921c2013075917fc927f41cd8526909852fe4494112/coverage-7.6.4-cp313-cp313t-win_amd64.whl", hash = "sha256:f3ddf056d3ebcf6ce47bdaf56142af51bb7fad09e4af310241e9db7a3a8022e1", size = 211502 },
     { url = "https://files.pythonhosted.org/packages/cc/56/e1d75e8981a2a92c2a777e67c26efa96c66da59d645423146eb9ff3a851b/coverage-7.6.4-pp39.pp310-none-any.whl", hash = "sha256:3c65d37f3a9ebb703e710befdc489a38683a5b152242664b973a7b7b22348a4e", size = 198954 },
+]
+
+[[package]]
+name = "croniter"
+version = "6.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "pytz" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ad/2f/44d1ae153a0e27be56be43465e5cb39b9650c781e001e7864389deb25090/croniter-6.0.0.tar.gz", hash = "sha256:37c504b313956114a983ece2c2b07790b1f1094fe9d81cc94739214748255577", size = 64481 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/4b/290b4c3efd6417a8b0c284896de19b1d5855e6dbdb97d2a35e68fa42de85/croniter-6.0.0-py2.py3-none-any.whl", hash = "sha256:2f878c3856f17896979b2a4379ba1f09c83e374931ea15cc835c5dd2eee9b368", size = 25468 },
 ]
 
 [[package]]
@@ -1920,6 +1932,7 @@ dependencies = [
     { name = "asyncio" },
     { name = "bcrypt" },
     { name = "celery" },
+    { name = "croniter" },
     { name = "cryptography" },
     { name = "email-validator" },
     { name = "emails" },
@@ -1968,6 +1981,7 @@ requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "bcrypt", specifier = "==4.0.1" },
     { name = "celery", specifier = ">=5.4.0" },
+    { name = "croniter", specifier = ">=6.0.0" },
     { name = "cryptography", specifier = ">=43.0.3" },
     { name = "email-validator", specifier = ">=2.1.0.post1,<3.0.0.0" },
     { name = "emails", specifier = ">=0.6,<1.0" },

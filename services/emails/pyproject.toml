@@ -36,6 +36,7 @@ dependencies = [
     "faststream[rabbit]>=0.5.37",
     "taskiq>=0.11.16",
     "taskiq-redis>=1.0.4",
+    "croniter>=6.0.0",
 ]
 
 [tool.uv]

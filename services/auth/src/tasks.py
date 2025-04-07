@@ -8,8 +8,14 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
+from libs.utils_lib.crud import (
+    get_job_by_name,
+)
+from libs.utils_lib.models import JobStatus
 from libs.utils_lib.tasks import (
+    logger,
     resend_outbox_events,
+    update_job_status,
 )
 
 
@@ -22,7 +28,14 @@ class tasks_settings(BaseSettings):
             "resend_outbox_events": {
                 "function": resend_outbox_events_task,
                 "cron": "* * * * *",
+                "args": {"job_name": "resend_outbox_events"},
+                "persistent": False,
             },
+            # This job will only execute once after 20 minutes
+            # "one-time-task": {
+            #     "function": test,
+            #     "interval": 20,
+            # },
         }
 
     JOBS = property(GET_JOBS)
@@ -59,9 +72,25 @@ async def shutdown(state: TaskiqState) -> None:
 
 
 @broker.task
-async def resend_outbox_events_task() -> None:
+async def resend_outbox_events_task(job_name: str | None = None) -> None:
     """
     Task to resend outbox events.
+
+    Args:
+        job_name (str | None): The name of the job. If provided, the job will be updated.
     """
     async with session_manager.get_session() as session:
-        await resend_outbox_events(session=session)
+        if job_name:
+            job = await get_job_by_name(session, job_name)
+
+        try:
+            await resend_outbox_events(session=session)
+
+            if job_name and job:
+                await update_job_status(session, job, JobStatus.completed)
+
+        except Exception as e:
+            logger.error("Error resending outbox events")
+            if job_name and job:
+                await update_job_status(session, job, JobStatus.failed, str(e))
+            return

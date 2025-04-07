@@ -146,8 +146,11 @@ async def create_job(
     session: AsyncSession,
     schedule_id: str | None,
     job_name: str,
+    next_run: datetime,
+    args: dict,
     cron: str | None = None,
     interval: int | None = None,
+    persistent: bool = False,
     commit: bool = True,
 ) -> Jobs:
     """
@@ -167,8 +170,11 @@ async def create_job(
     job = Jobs(
         schedule_id=schedule_id,
         job_name=job_name,
+        next_run=next_run,
         cron=cron,
         interval=interval,
+        ARGS=args,
+        Persistent=persistent,
     )
     session.add(job)
 
