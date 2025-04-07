@@ -12,11 +12,12 @@ from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
+from libs.utils_lib.tasks import schedule_jobs
 from src.api import events
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
 from src.crud import create_root_user
-from src.tasks import schedule_jobs
+from src.tasks import redis_source, tasks_settings
 
 
 class app_settings(BaseSettings):
@@ -47,7 +48,7 @@ async def lifespan(app: FastAPI) -> Any:
     await redis_client.connect()
     await rabbitmq.start()
     # Schedule jobs
-    await schedule_jobs()
+    await schedule_jobs(jobs=tasks_settings.JOBS, redis_source=redis_source)
 
     # Create root user
     if (
