@@ -152,7 +152,7 @@ async def create_job(
     kwargs: dict,
     labels: dict,
     cron: str | None = None,
-    interval: int | None = None,
+    time: datetime | None = None,
     persistent: bool = False,
     commit: bool = True,
 ) -> Jobs:
@@ -164,7 +164,7 @@ async def create_job(
         schedule_id (str): The schedule ID.
         job_name (str): The function name.
         cron (str): The cron expression.
-        interval (int): The interval in seconds.
+        time (datetime): The time to run the job.
         commit (bool): Commit at the end of the operation.
 
     Returns:
@@ -175,7 +175,7 @@ async def create_job(
         job_name=job_name,
         next_run=next_run,
         cron=cron,
-        interval=interval,
+        time=time,
         task_name=task_name,
         args=args,
         kwargs=kwargs,
@@ -191,9 +191,31 @@ async def create_job(
     return job
 
 
-async def get_jobs(
-        session: AsyncSession
-) -> list[Jobs]:
+async def delete_job(
+    session: AsyncSession,
+    id: str,
+    commit: bool = True,
+) -> None:
+    """
+    Delete a job record.
+
+    Args:
+        session (AsyncSession): The database session.
+        id (str): The job ID.
+        commit (bool): Commit at the end of the operation.
+    """
+    stmt = select(Jobs).where(Jobs.id == id)
+    result = await session.exec(stmt)
+    job = result.one_or_none()
+
+    if job:
+        await session.delete(job)
+
+        if commit:
+            await session.commit()
+
+
+async def get_jobs(session: AsyncSession) -> list[Jobs]:
     """
     Get all jobs.
 
@@ -238,8 +260,7 @@ async def get_persistent_failed_jobs(
         list[Jobs]: The list of persistent failed jobs.
     """
     stmt = select(Jobs).where(
-        Jobs.last_run_status == JobStatus.failed,
-        Jobs.persistent == True
+        Jobs.last_run_status == JobStatus.failed, Jobs.persistent.is_(True)
     )
     result = await session.exec(stmt)
     return result.all()

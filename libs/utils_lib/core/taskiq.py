@@ -1,35 +1,20 @@
-from typing import List
 import logging
+from datetime import datetime
 
-from redis.asyncio import Redis
+from croniter import croniter
 from taskiq import ScheduleSource
 from taskiq.exceptions import ScheduledTaskCancelledError
 from taskiq.scheduler.scheduled_task import ScheduledTask
-from sqlmodel import delete, select
-from taskiq_redis import RedisAsyncResultBackend, RedisScheduleSource
-from sqlmodel.ext.asyncio.session import AsyncSession
-from croniter import croniter
-from datetime import datetime
+from taskiq_redis import RedisAsyncResultBackend
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
-from libs.utils_lib.core.redis import RedisClient, redis_client
 from libs.utils_lib.core.database import DatabaseSessionManager, session_manager
-from libs.utils_lib.models import Jobs
-from libs.utils_lib.crud import create_job, get_jobs, get_job_by_name
-
+from libs.utils_lib.core.redis import RedisClient, redis_client
+from libs.utils_lib.crud import create_job, delete_job, get_job_by_name, get_jobs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Extend the RedisScheduleSource to add a lock mechanism (For distributed scheduling)
-class LockScheduleSource(RedisScheduleSource):
-    async def pre_send(self, task: ScheduledTask) -> None:
-        async with Redis(connection_pool=self.connection_pool) as redis_client:
-            lock = await redis_client.set(
-                f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=20
-            )
-            if not lock:
-                raise ScheduledTaskCancelledError()
 
 class MyScheduleSource(ScheduleSource):
     """
@@ -55,56 +40,27 @@ class MyScheduleSource(ScheduleSource):
         self.session_manager = session_manager
         self.redis_client = redis_client
 
-
     async def startup(self) -> None:
         await self.session_manager.init_db()
         await self.redis_client.connect()
 
     async def shutdown(self) -> None:
-
         await self.session_manager.shutdown()
         await self.redis_client.close()
-        
+
     async def delete_schedule(self, schedule_id: str) -> None:
-
         async with self.session_manager.get_session() as session:
-            statement = delete(Jobs).where(Jobs.schedule_id == schedule_id)
-            await session.execute(statement)
-            await session.commit()
-
-    async def update_schedule(
-        self,
-        session: AsyncSession,
-        job: Jobs,
-        task_name: str,
-        next_run: datetime,
-        args: dict,
-        kwargs: dict,
-        labels: dict,
-        persistent: bool,
-        cron: str | None = None,
-        interval: int | None = None,
-    ) -> None:
-        job.task_name = task_name
-        job.next_run = next_run
-        job.modified_at = datetime.utcnow()
-        job.args = args
-        job.kwargs = kwargs
-        job.labels = labels
-        job.persistent = persistent
-        job.cron = cron
-        job.interval = interval
-
-        await session.commit()
-        await session.refresh(job)
-
+            await delete_job(
+                session=session,
+                id=schedule_id,
+                commit=True,
+            )
 
     async def add_schedule(self, schedule: ScheduledTask) -> None:
-
         async with self.session_manager.get_session() as session:
             if not schedule.labels["job_name"]:
                 raise ValueError("Label 'job_name' is required")
-            
+
             job_name = schedule.labels.get("job_name")
             persistent = schedule.labels.get("persistent", False)
 
@@ -135,48 +91,41 @@ class MyScheduleSource(ScheduleSource):
                     and existing_job.args == schedule.args
                     and existing_job.kwargs == schedule.kwargs
                     and existing_job.cron == schedule.cron
-                    and existing_job.interval == schedule.time
+                    and existing_job.time == schedule.time
                     and existing_job.persistent == persistent
                 ):
                     await redis.delete(lock_key)
                     logger.info(f"Job {job_name} already exists. Skipping creation.")
                     return
                 else:
-                    # Update the existing job
-                    await self.update_schedule(
+                    await delete_job(
                         session=session,
-                        job=existing_job,
-                        task_name=schedule.task_name,
-                        next_run=next_run,
-                        args=schedule.args,
-                        kwargs=schedule.kwargs,
-                        labels=schedule.labels,
-                        persistent=persistent,
-                        cron=schedule.cron,
-                        interval=schedule.time,
+                        id=existing_job.id,
+                        commit=True,
                     )
-                    logger.info(f"Job {existing_job.job_name} updated.")
+
+            await create_job(
+                session=session,
+                id=schedule.schedule_id,
+                job_name=job_name,
+                next_run=next_run,
+                task_name=schedule.task_name,
+                args=schedule.args,
+                kwargs=schedule.kwargs,
+                labels=schedule.labels,
+                cron=schedule.cron,
+                time=schedule.time,
+                persistent=persistent,
+                commit=True,
+            )
+            if existing_job:
+                logger.info(f"Job {job_name} updated.")
             else:
-                await create_job(
-                    session=session,
-                    id=schedule.schedule_id,
-                    job_name=job_name,
-                    next_run=next_run,
-                    task_name=schedule.task_name,
-                    args=schedule.args,
-                    kwargs=schedule.kwargs,
-                    labels=schedule.labels,
-                    cron=schedule.cron,
-                    interval=schedule.time,
-                    persistent=persistent,
-                    commit=True,
-                )
-                logger.info(f"Job {job_name} created and scheduled.")
+                logger.info(f"Job {job_name} created.")
 
             await redis.delete(lock_key)
 
-
-    async def get_schedules(self) -> List[ScheduledTask]:
+    async def get_schedules(self) -> list[ScheduledTask]:
         async with self.session_manager.get_session() as session:
             jobs = await get_jobs(session=session)
 
@@ -189,11 +138,19 @@ class MyScheduleSource(ScheduleSource):
                 kwargs=job.kwargs,
                 labels=job.labels,
                 cron=job.cron,
-                time=job.next_run,
+                time=job.time,
             )
             schedules.append(schedule)
 
         return schedules
+
+    async def pre_send(self, task: ScheduledTask) -> None:
+        redis = await self.redis_client.get_client()
+        lock = await redis.set(
+            f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=20
+        )
+        if not lock:
+            raise ScheduledTaskCancelledError()
 
     async def post_send(self, task: ScheduledTask) -> None:
         pass
@@ -201,4 +158,6 @@ class MyScheduleSource(ScheduleSource):
 
 result_backend = RedisAsyncResultBackend(utils_lib_settings.REDIS_URL)
 
-redis_source = MyScheduleSource(session_manager= session_manager, redis_client=redis_client)
+redis_source = MyScheduleSource(
+    session_manager=session_manager, redis_client=redis_client
+)

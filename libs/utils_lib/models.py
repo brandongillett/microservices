@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
-from typing import Optional, Union
 
 from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field, SQLModel
@@ -37,7 +36,7 @@ class JobsBase(SQLModel):
         index=True,
     )
     cron: str | None = None
-    interval: int | None = None
+    time: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     modified_at: datetime = Field(default_factory=datetime.utcnow)
     next_run: datetime
@@ -65,7 +64,7 @@ class Jobs(JobsBase, table=True):
         primary_key=True,
         default_factory=lambda: uuid4().hex,
         index=True,
-        )
+    )
     task_name: str = Field(max_length=255)
     args: dict = Field(default={}, sa_column=Column(JSON))
     kwargs: dict = Field(default={}, sa_column=Column(JSON))

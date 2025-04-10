@@ -13,8 +13,8 @@ from libs.utils_lib.crud import get_job_by_name
 from libs.utils_lib.models import JobStatus
 from libs.utils_lib.tasks import (
     logger,
-    resend_outbox_events,
     rerun_persistent_jobs,
+    resend_outbox_events,
     update_job_status,
 )
 
@@ -22,7 +22,6 @@ from libs.utils_lib.tasks import (
 # Tasks Settings
 class tasks_settings(BaseSettings):
     def get_jobs(self) -> dict[str, Any]:
-
         return {
             # "resend_outbox_events": {
             #     "function": resend_outbox_events_task,
@@ -72,6 +71,7 @@ async def shutdown(state: TaskiqState) -> None:
     await redis_client.close()
     await rabbitmq.close()
 
+
 @broker.task
 async def test(job_name: str | None = None) -> None:
     """
@@ -92,6 +92,7 @@ async def test(job_name: str | None = None) -> None:
             if job:
                 await update_job_status(session, job, JobStatus.failed, str(e))
 
+
 @broker.task
 async def rerun_persistent_jobs_task(job_name: str | None = None) -> None:
     """
@@ -111,6 +112,7 @@ async def rerun_persistent_jobs_task(job_name: str | None = None) -> None:
             logger.error(f"Error running {__name__}: {e}")
             if job:
                 await update_job_status(session, job, JobStatus.failed, str(e))
+
 
 @broker.task
 async def resend_outbox_events_task(job_name: str | None = None) -> None:
