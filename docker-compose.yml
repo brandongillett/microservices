@@ -342,7 +342,7 @@ services:
   auth-scheduler:
     build:
       context: ./services/auth
-    command: watchmedo auto-restart --recursive -p '*.py' -- taskiq scheduler src.tasks:scheduler --log-level INFO
+    command: watchmedo auto-restart --recursive -p '*.py' -- taskiq scheduler src.tasks:scheduler --log-level INFO --skip-first-run
     develop:
       watch:
         - path: ./services/auth

@@ -1,8 +1,8 @@
 """initial data
 
-Revision ID: 6e9858a7938c
+Revision ID: 939a2c487e31
 Revises: 
-Create Date: 2025-04-07 17:32:34.723548
+Create Date: 2025-04-09 19:13:56.895448
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6e9858a7938c'
+revision: str = '939a2c487e31'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -54,14 +54,16 @@ def upgrade() -> None:
     sa.Column('persistent', sa.Boolean(), nullable=False),
     sa.Column('last_run_status', sa.Enum('completed', 'failed', name='jobstatus'), nullable=True),
     sa.Column('enabled', sa.Boolean(), nullable=False),
-    sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('schedule_id', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
-    sa.Column('ARGS', sa.JSON(), nullable=True),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('task_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('args', sa.JSON(), nullable=True),
+    sa.Column('kwargs', sa.JSON(), nullable=True),
+    sa.Column('labels', sa.JSON(), nullable=True),
     sa.Column('last_run_error', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_jobs_job_name'), 'jobs', ['job_name'], unique=False)
-    op.create_index(op.f('ix_jobs_schedule_id'), 'jobs', ['schedule_id'], unique=True)
+    op.create_index(op.f('ix_jobs_id'), 'jobs', ['id'], unique=False)
+    op.create_index(op.f('ix_jobs_job_name'), 'jobs', ['job_name'], unique=True)
     op.create_table('users',
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(length=22), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -97,8 +99,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
-    op.drop_index(op.f('ix_jobs_schedule_id'), table_name='jobs')
     op.drop_index(op.f('ix_jobs_job_name'), table_name='jobs')
+    op.drop_index(op.f('ix_jobs_id'), table_name='jobs')
     op.drop_table('jobs')
     op.drop_table('eventoutbox')
     op.drop_table('eventinbox')

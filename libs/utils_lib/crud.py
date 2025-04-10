@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.utils_lib.models import EventInbox, EventOutbox, EventStatus, Jobs
+from libs.utils_lib.models import EventInbox, EventOutbox, EventStatus, Jobs, JobStatus
 
 
 # CRUD operations for EventInbox
@@ -144,10 +144,13 @@ async def get_pending_outbox_events(
 # CRUD operations for Tasks
 async def create_job(
     session: AsyncSession,
-    schedule_id: str | None,
+    id: str | None,
     job_name: str,
     next_run: datetime,
+    task_name: str,
     args: dict,
+    kwargs: dict,
+    labels: dict,
     cron: str | None = None,
     interval: int | None = None,
     persistent: bool = False,
@@ -168,13 +171,16 @@ async def create_job(
         EventOutbox: The job record.
     """
     job = Jobs(
-        schedule_id=schedule_id,
+        id=id,
         job_name=job_name,
         next_run=next_run,
         cron=cron,
         interval=interval,
-        ARGS=args,
-        Persistent=persistent,
+        task_name=task_name,
+        args=args,
+        kwargs=kwargs,
+        labels=labels,
+        persistent=persistent,
     )
     session.add(job)
 
@@ -183,6 +189,23 @@ async def create_job(
         await session.refresh(job)
 
     return job
+
+
+async def get_jobs(
+        session: AsyncSession
+) -> list[Jobs]:
+    """
+    Get all jobs.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        list[Jobs]: The list of jobs.
+    """
+    stmt = select(Jobs)
+    result = await session.exec(stmt)
+    return result.all()
 
 
 async def get_job_by_name(session: AsyncSession, job_name: str) -> Jobs | None:
@@ -199,3 +222,24 @@ async def get_job_by_name(session: AsyncSession, job_name: str) -> Jobs | None:
     stmt = select(Jobs).where(Jobs.job_name == job_name)
     result = await session.exec(stmt)
     return result.one_or_none()
+
+
+async def get_persistent_failed_jobs(
+    session: AsyncSession,
+) -> list[Jobs]:
+    """
+    Get all persistent failed jobs. If time is provided, get all persistent failed jobs older than the given time in minutes.
+
+    Args:
+        session (AsyncSession): The database session.
+        time (int): The time in minutes.
+
+    Returns:
+        list[Jobs]: The list of persistent failed jobs.
+    """
+    stmt = select(Jobs).where(
+        Jobs.last_run_status == JobStatus.failed,
+        Jobs.persistent == True
+    )
+    result = await session.exec(stmt)
+    return result.all()

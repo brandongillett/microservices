@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from uuid import UUID, uuid4
+from typing import Optional, Union
 
 from sqlalchemy import JSON, Column, Text
 from sqlmodel import Field, SQLModel
@@ -31,6 +32,7 @@ class EventBase(SQLModel):
 
 class JobsBase(SQLModel):
     job_name: str = Field(
+        unique=True,
         max_length=255,
         index=True,
     )
@@ -59,11 +61,13 @@ class EventOutbox(EventBase, table=True):
 
 
 class Jobs(JobsBase, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    schedule_id: str = Field(
-        max_length=255,
-        unique=True,
+    id: str = Field(
+        primary_key=True,
+        default_factory=lambda: uuid4().hex,
         index=True,
-    )
-    ARGS: dict = Field(default={}, sa_column=Column(JSON))
+        )
+    task_name: str = Field(max_length=255)
+    args: dict = Field(default={}, sa_column=Column(JSON))
+    kwargs: dict = Field(default={}, sa_column=Column(JSON))
+    labels: dict = Field(default={}, sa_column=Column(JSON))
     last_run_error: str | None = Field(default=None, sa_column=Column(Text))
