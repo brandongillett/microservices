@@ -41,14 +41,26 @@ class MyScheduleSource(ScheduleSource):
         self.redis_client = redis_client
 
     async def startup(self) -> None:
+        """
+        Initialize the schedule source.
+        """
         await self.session_manager.init_db()
         await self.redis_client.connect()
 
     async def shutdown(self) -> None:
+        """
+        Shutdown the schedule source.
+        """
         await self.session_manager.shutdown()
         await self.redis_client.close()
 
     async def delete_schedule(self, schedule_id: str) -> None:
+        """
+        Delete a schedule.
+
+        Args:
+            schedule_id (str): The schedule ID.
+        """
         async with self.session_manager.get_session() as session:
             await delete_job(
                 session=session,
@@ -57,12 +69,20 @@ class MyScheduleSource(ScheduleSource):
             )
 
     async def add_schedule(self, schedule: ScheduledTask) -> None:
+        """
+        Add a schedule.
+
+        Args:
+            schedule (ScheduledTask): The schedule to add.
+        """
         async with self.session_manager.get_session() as session:
             if not schedule.labels["job_name"]:
                 raise ValueError("Label 'job_name' is required")
 
             job_name = schedule.labels.get("job_name")
             persistent = schedule.labels.get("persistent", False)
+            if isinstance(persistent, str):
+                persistent = persistent.lower() == "true"
 
             redis = await self.redis_client.get_client()
 
@@ -126,8 +146,14 @@ class MyScheduleSource(ScheduleSource):
             await redis.delete(lock_key)
 
     async def get_schedules(self) -> list[ScheduledTask]:
+        """
+        Get all schedules.
+
+        Returns:
+            list[ScheduledTask]: List of schedules.
+        """
         async with self.session_manager.get_session() as session:
-            jobs = await get_jobs(session=session)
+            jobs = await get_jobs(session=session, get_enabled=True)
 
         schedules = []
         for job in jobs:
@@ -145,6 +171,12 @@ class MyScheduleSource(ScheduleSource):
         return schedules
 
     async def pre_send(self, task: ScheduledTask) -> None:
+        """
+        Pre-send hook for scheduled tasks.
+
+        Args:
+            task (ScheduledTask): The scheduled task.
+        """
         redis = await self.redis_client.get_client()
         lock = await redis.set(
             f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=20
@@ -153,11 +185,26 @@ class MyScheduleSource(ScheduleSource):
             raise ScheduledTaskCancelledError()
 
     async def post_send(self, task: ScheduledTask) -> None:
-        pass
+        """
+        Post-send hook for scheduled tasks.
+
+        Args:
+            task (ScheduledTask): The scheduled task.
+        """
+        if task.cron:
+            async with self.session_manager.get_session() as session:
+                job = await get_job_by_name(
+                    session=session, job_name=task.labels["job_name"]
+                )
+                cron_next_run = croniter(job.cron, datetime.utcnow())
+                job.next_run = cron_next_run.get_next(datetime)
+
+                await session.commit()
+                await session.refresh(job)
 
 
 result_backend = RedisAsyncResultBackend(utils_lib_settings.REDIS_URL)
 
-redis_source = MyScheduleSource(
+schedule_source = MyScheduleSource(
     session_manager=session_manager, redis_client=redis_client
 )

@@ -215,7 +215,7 @@ async def delete_job(
             await session.commit()
 
 
-async def get_jobs(session: AsyncSession) -> list[Jobs]:
+async def get_jobs(session: AsyncSession, get_enabled: bool = False) -> list[Jobs]:
     """
     Get all jobs.
 
@@ -225,7 +225,10 @@ async def get_jobs(session: AsyncSession) -> list[Jobs]:
     Returns:
         list[Jobs]: The list of jobs.
     """
-    stmt = select(Jobs)
+    if get_enabled:
+        stmt = select(Jobs).where(Jobs.enabled.is_(True))
+    else:
+        stmt = select(Jobs)
     result = await session.exec(stmt)
     return result.all()
 
@@ -260,7 +263,34 @@ async def get_persistent_failed_jobs(
         list[Jobs]: The list of persistent failed jobs.
     """
     stmt = select(Jobs).where(
-        Jobs.last_run_status == JobStatus.failed, Jobs.persistent.is_(True)
+        Jobs.enabled.is_(True),
+        Jobs.persistent.is_(True),
+        Jobs.last_run_status == JobStatus.failed,
     )
+    result = await session.exec(stmt)
+    return result.all()
+
+
+async def get_persistent_missed_jobs(
+    session: AsyncSession,
+) -> list[Jobs]:
+    """
+    Get all persistent missed jobs.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        list[Jobs]: The list of persistent missed jobs.
+    """
+
+    stmt = select(Jobs).where(
+        Jobs.enabled.is_(True),
+        Jobs.persistent.is_(True),
+        Jobs.last_run is not None,
+        Jobs.next_run < datetime.utcnow(),
+        Jobs.last_run < Jobs.next_run,
+    )
+
     result = await session.exec(stmt)
     return result.all()
