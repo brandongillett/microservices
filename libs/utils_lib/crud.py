@@ -284,13 +284,22 @@ async def get_persistent_missed_jobs(
         list[Jobs]: The list of persistent missed jobs.
     """
 
-    stmt = select(Jobs).where(
+    stmt1 = select(Jobs).where(
         Jobs.enabled.is_(True),
         Jobs.persistent.is_(True),
         Jobs.last_run is not None,
-        Jobs.next_run < datetime.utcnow(),
+        Jobs.next_run < datetime.utcnow() - timedelta(minutes=1),
         Jobs.last_run < Jobs.next_run,
     )
 
-    result = await session.exec(stmt)
-    return result.all()
+    stmt2 = select(Jobs).where(
+        Jobs.enabled.is_(True),
+        Jobs.persistent.is_(True),
+        Jobs.last_run.is_(None),
+        Jobs.next_run < datetime.utcnow() - timedelta(minutes=1),
+    )
+
+    result1 = await session.exec(stmt1)
+    result2 = await session.exec(stmt2)
+
+    return result1.all() + result2.all()

@@ -179,7 +179,7 @@ class MyScheduleSource(ScheduleSource):
         """
         redis = await self.redis_client.get_client()
         lock = await redis.set(
-            f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=20
+            f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=30
         )
         if not lock:
             raise ScheduledTaskCancelledError()

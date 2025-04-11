@@ -8,13 +8,11 @@ from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
 from libs.utils_lib.core.rabbitmq import rabbitmq
 from libs.utils_lib.core.redis import redis_client
-from libs.utils_lib.core.taskiq import logger, result_backend, schedule_source
-from libs.utils_lib.crud import get_job_by_name
-from libs.utils_lib.models import JobStatus
+from libs.utils_lib.core.taskiq import result_backend, schedule_source
 from libs.utils_lib.tasks import (
+    handle_run_task,
     rerun_persistent_jobs,
     resend_outbox_events,
-    update_job_status,
 )
 
 
@@ -25,20 +23,19 @@ class tasks_settings(BaseSettings):
             "resend_outbox_events": {
                 "function": resend_outbox_events_task,
                 "cron": "*/5 * * * *",
-                "args": {"job_name": "resend_outbox_events"},
                 "persistent": False,
             },
             "rerun_persistent_jobs": {
                 "function": rerun_persistent_jobs_task,
                 "cron": "* * * * *",
-                "args": {"job_name": "rerun_persistent_jobs"},
                 "persistent": False,
             },
             # This job will only execute once after 20 minutes
             # "one-time-task": {
             #     "function": test,
-            #     "time": datetime.utcnow() + timedelta(minutes=20),
-            #     "args": {"job_name": "one-time-task"},
+            #     "time": datetime.utcnow() + timedelta(minutes=1),
+            #     "args": [True],
+            #     "kwargs": {"test": "test"},
             #     "persistent": True,  # rerun if missed or failed
             # },
         }
@@ -80,16 +77,13 @@ async def rerun_persistent_jobs_task(job_name: str | None = None) -> None:
         job_name (str | None): The name of the job. If provided, the job will be updated.
     """
     async with session_manager.get_session() as session:
-        if job_name:
-            job = await get_job_by_name(session, job_name)
-        try:
-            await rerun_persistent_jobs(session=session)
-            if job:
-                await update_job_status(session, job, JobStatus.completed)
-        except Exception as e:
-            logger.error(f"Error running {__name__}: {e}")
-            if job:
-                await update_job_status(session, job, JobStatus.failed, str(e))
+        await handle_run_task(
+            session,
+            "rerun_persistent_jobs_task",
+            job_name,
+            rerun_persistent_jobs,
+            session,
+        )
 
 
 @broker.task
@@ -101,13 +95,10 @@ async def resend_outbox_events_task(job_name: str | None = None) -> None:
         job_name (str | None): The name of the job. If provided, the job will be updated.
     """
     async with session_manager.get_session() as session:
-        if job_name:
-            job = await get_job_by_name(session, job_name)
-        try:
-            await resend_outbox_events(session=session)
-            if job:
-                await update_job_status(session, job, JobStatus.completed)
-        except Exception as e:
-            logger.error(f"Error running {__name__}: {e}")
-            if job:
-                await update_job_status(session, job, JobStatus.failed, str(e))
+        await handle_run_task(
+            session,
+            "resend_outbox_events_task",
+            job_name,
+            resend_outbox_events,
+            session,
+        )

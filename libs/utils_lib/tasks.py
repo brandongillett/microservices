@@ -1,4 +1,5 @@
 import importlib
+from collections.abc import Callable
 from datetime import datetime
 from typing import cast
 
@@ -8,8 +9,10 @@ from libs.utils_lib.api.events import handle_publish_event
 from libs.utils_lib.core.taskiq import logger, schedule_source
 from libs.utils_lib.crud import (
     get_failed_outbox_events,
+    get_job_by_name,
     get_pending_outbox_events,
     get_persistent_failed_jobs,
+    get_persistent_missed_jobs,
 )
 from libs.utils_lib.models import Jobs, JobStatus
 
@@ -71,6 +74,38 @@ async def update_job_status(
 
 
 # Shared Tasks
+async def handle_run_task(
+    session: AsyncSession,
+    task_name: str,
+    job_name: str | None,
+    task_function: Callable,
+    *args,
+    **kwargs,
+) -> None:
+    """
+    Helper function to run a task and update its status if job_name is provided.
+
+    Args:
+        session (AsyncSession): The database session.
+        task_name (str): The name of the task.
+        job_name (str | None): The name of the job.
+        task_function (Callable): The function to run.
+        *args: Positional arguments for the job logic.
+        **kwargs: Keyword arguments for the job logic.
+    """
+    job = None
+    if job_name:
+        job = await get_job_by_name(session, job_name)
+    try:
+        await task_function(*args, **kwargs)
+        if job:
+            await update_job_status(session, job, JobStatus.completed)
+    except Exception as e:
+        logger.error(f"Error running {task_name}: {e}")
+        if job:
+            await update_job_status(session, job, JobStatus.failed, str(e))
+
+
 async def rerun_persistent_jobs(session: AsyncSession) -> None:
     """
     Rerun persistent jobs that were missed or failed.
@@ -88,16 +123,27 @@ async def rerun_persistent_jobs(session: AsyncSession) -> None:
     """
 
     try:
-        failed_jobs = await get_persistent_failed_jobs(session)
+        missed_jobs = await get_persistent_missed_jobs(session)
     except Exception:
-        logger.error("Error fetching persistent jobs")
+        logger.error("Error fetching missed jobs")
         return
 
-    for job in failed_jobs:
-        module_name, function_name = job.task_name.split(":")
-        module = importlib.import_module(module_name)
-        function = getattr(module, function_name)
+    try:
+        failed_jobs = await get_persistent_failed_jobs(session)
+    except Exception:
+        logger.error("Error fetching failed jobs")
+        return
+
+    # Combine and deduplicate jobs by job.id
+    jobs_by_id = {}
+    for job in missed_jobs + failed_jobs:
+        jobs_by_id[job.id] = job
+
+    for job in jobs_by_id.values():
         try:
+            module_name, function_name = job.task_name.split(":")
+            module = importlib.import_module(module_name)
+            function = getattr(module, function_name)
             await function.kiq(**job.args, **job.kwargs)
         except Exception:
             logger.error(f"Error rerunning job {job.job_name}")
