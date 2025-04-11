@@ -1,6 +1,7 @@
+from email.message import EmailMessage
 from typing import Any
 
-import emails  # type: ignore
+import aiosmtplib
 from pydantic_settings import BaseSettings
 from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq_redis import RedisStreamBroker
@@ -116,25 +117,21 @@ async def send_email(email_to: str, subject: str, html: str) -> str:
         subject (str): The subject of the email.
         html (str): The HTML content of the email.
     """
-    message = emails.Message(
-        subject=subject,
-        html=html,
-        mail_from=(utils_lib_settings.PROJECT_NAME, settings.EMAILS_FROM_EMAIL),
-    )
-    smtp_options = {"host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
-    if settings.SMTP_TLS:
-        smtp_options["tls"] = True
-    elif settings.SMTP_SSL:
-        smtp_options["ssl"] = True
-    if settings.SMTP_USER:
-        smtp_options["user"] = settings.SMTP_USER
-    if settings.SMTP_PASSWORD:
-        smtp_options["password"] = settings.SMTP_PASSWORD
+    message = EmailMessage()
+    message["From"] = settings.EMAILS_FROM_EMAIL
+    message["To"] = email_to
+    message["Subject"] = subject
+    message.set_content(html, subtype="html")
 
     try:
-        response = message.send(to=email_to, smtp=smtp_options)
-        if response.status_code != 250:
-            return f"Failed to send email, response: {response.status_text}"
+        await aiosmtplib.send(
+            message,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            use_tls=settings.SMTP_TLS,
+            username=settings.SMTP_USER if settings.SMTP_USER else None,
+            password=settings.SMTP_PASSWORD if settings.SMTP_PASSWORD else None,
+        )
         return "Email sent successfully"
-    except Exception as e:
-        return str(e)
+    except aiosmtplib.SMTPException as e:
+        return f"Failed to send email: {e}"

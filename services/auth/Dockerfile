@@ -2,11 +2,7 @@ FROM python:3.10
 
 ENV PYTHONUNBUFFERED=1
 
-RUN useradd -ms /bin/bash appuser
-
 WORKDIR /app/
-
-RUN chown appuser:appuser /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.10 /uv /bin/uv
 
@@ -23,11 +19,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 ENV PYTHONPATH=/app
 
-COPY --chown=appuser:appuser ./scripts /app/scripts
+COPY ./scripts /app/scripts
 
-COPY --chown=appuser:appuser ./pyproject.toml ./uv.lock ./alembic.ini /app/
+COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
-COPY --chown=appuser:appuser ./src /app/src
+COPY ./src /app/src
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
