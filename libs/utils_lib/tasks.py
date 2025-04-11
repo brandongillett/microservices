@@ -144,7 +144,7 @@ async def rerun_persistent_jobs(session: AsyncSession) -> None:
             module_name, function_name = job.task_name.split(":")
             module = importlib.import_module(module_name)
             function = getattr(module, function_name)
-            await function.kiq(**job.args, **job.kwargs)
+            await function.kiq(*job.args, **job.kwargs)
         except Exception:
             logger.error(f"Error rerunning job {job.job_name}")
 

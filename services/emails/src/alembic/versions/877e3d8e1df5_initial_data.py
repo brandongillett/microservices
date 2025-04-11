@@ -1,8 +1,8 @@
 """initial data
 
-Revision ID: a6ea7a0c42be
-Revises:
-Create Date: 2025-01-21 21:48:52.606698
+Revision ID: 877e3d8e1df5
+Revises: 
+Create Date: 2025-04-11 16:07:27.531130
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'a6ea7a0c42be'
+revision: str = '877e3d8e1df5'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -43,6 +43,27 @@ def upgrade() -> None:
     sa.Column('error_message', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('jobs',
+    sa.Column('job_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('cron', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('time', sa.DateTime(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('modified_at', sa.DateTime(), nullable=False),
+    sa.Column('next_run', sa.DateTime(), nullable=False),
+    sa.Column('last_run', sa.DateTime(), nullable=True),
+    sa.Column('persistent', sa.Boolean(), nullable=False),
+    sa.Column('last_run_status', sa.Enum('completed', 'failed', name='jobstatus'), nullable=True),
+    sa.Column('enabled', sa.Boolean(), nullable=False),
+    sa.Column('id', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('task_name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
+    sa.Column('args', sa.JSON(), nullable=True),
+    sa.Column('kwargs', sa.JSON(), nullable=True),
+    sa.Column('labels', sa.JSON(), nullable=True),
+    sa.Column('last_run_error', sa.Text(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_jobs_id'), 'jobs', ['id'], unique=False)
+    op.create_index(op.f('ix_jobs_job_name'), 'jobs', ['job_name'], unique=True)
     op.create_table('useremails',
     sa.Column('username', sqlmodel.sql.sqltypes.AutoString(length=22), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
@@ -61,6 +82,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_useremails_username'), table_name='useremails')
     op.drop_index(op.f('ix_useremails_email'), table_name='useremails')
     op.drop_table('useremails')
+    op.drop_index(op.f('ix_jobs_job_name'), table_name='jobs')
+    op.drop_index(op.f('ix_jobs_id'), table_name='jobs')
+    op.drop_table('jobs')
     op.drop_table('eventoutbox')
     op.drop_table('eventinbox')
     # ### end Alembic commands ###

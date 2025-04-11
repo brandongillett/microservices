@@ -1,0 +1,140 @@
+from typing import Any
+
+import emails  # type: ignore
+from pydantic_settings import BaseSettings
+from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
+from taskiq_redis import RedisStreamBroker
+
+from libs.utils_lib.core.config import settings as utils_lib_settings
+from libs.utils_lib.core.database import session_manager
+from libs.utils_lib.core.rabbitmq import rabbitmq
+from libs.utils_lib.core.redis import redis_client
+from libs.utils_lib.core.taskiq import result_backend, schedule_source
+from libs.utils_lib.tasks import (
+    handle_run_task,
+    rerun_persistent_jobs,
+    resend_outbox_events,
+)
+from src.core.config import settings
+
+
+# Tasks Settings
+class tasks_settings(BaseSettings):
+    def get_jobs(self) -> dict[str, Any]:
+        return {
+            "resend_outbox_events": {
+                "function": resend_outbox_events_task,
+                "cron": "*/5 * * * *",
+                "persistent": False,
+            },
+            "rerun_persistent_jobs": {
+                "function": rerun_persistent_jobs_task,
+                "cron": "* * * * *",
+                "persistent": False,
+            },
+            # This job will only execute once after 20 minutes
+            # "one-time-task": {
+            #     "function": test,
+            #     "time": datetime.utcnow() + timedelta(minutes=1),
+            #     "args": [True],
+            #     "kwargs": {"test": "test"},
+            #     "persistent": True,  # rerun if missed or failed
+            # },
+        }
+
+    JOBS = property(get_jobs)
+
+
+tasks_settings = tasks_settings()  # type: ignore
+
+broker = RedisStreamBroker(utils_lib_settings.REDIS_URL).with_result_backend(
+    result_backend
+)
+
+scheduler = TaskiqScheduler(broker, sources=[schedule_source])
+
+
+@broker.on_event(TaskiqEvents.WORKER_STARTUP)
+async def startup(state: TaskiqState) -> None:
+    _ = state  # Unused variable
+    await session_manager.init_db()
+    await redis_client.connect()
+    await rabbitmq.start()
+
+
+@broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)
+async def shutdown(state: TaskiqState) -> None:
+    _ = state  # Unused variable
+    await session_manager.close()
+    await redis_client.close()
+    await rabbitmq.close()
+
+
+@broker.task
+async def rerun_persistent_jobs_task(job_name: str | None = None) -> None:
+    """
+    Task to rerun persistent jobs.
+
+    Args:
+        job_name (str | None): The name of the job. If provided, the job will be updated.
+    """
+    async with session_manager.get_session() as session:
+        await handle_run_task(
+            session,
+            "rerun_persistent_jobs_task",
+            job_name,
+            rerun_persistent_jobs,
+            session,
+        )
+
+
+@broker.task
+async def resend_outbox_events_task(job_name: str | None = None) -> None:
+    """
+    Task to resend outbox events.
+
+    Args:
+        job_name (str | None): The name of the job. If provided, the job will be updated.
+    """
+    async with session_manager.get_session() as session:
+        await handle_run_task(
+            session,
+            "resend_outbox_events_task",
+            job_name,
+            resend_outbox_events,
+            session,
+        )
+
+
+@broker.task
+async def send_email(email_to: str, subject: str, html: str) -> str:
+    """
+    Sends an email.
+
+    Args:
+        email (str): The email to send the message to.
+        subject (str): The subject of the email.
+        html (str): The HTML content of the email.
+    """
+    message = emails.Message(
+        subject=subject,
+        html=html,
+        mail_from=(utils_lib_settings.PROJECT_NAME, settings.EMAILS_FROM_EMAIL),
+    )
+    smtp_options = {"host": settings.SMTP_HOST, "port": settings.SMTP_PORT}
+    if settings.SMTP_TLS:
+        smtp_options["tls"] = True
+    elif settings.SMTP_SSL:
+        smtp_options["ssl"] = True
+    if settings.SMTP_USER:
+        smtp_options["user"] = settings.SMTP_USER
+    if settings.SMTP_PASSWORD:
+        smtp_options["password"] = settings.SMTP_PASSWORD
+
+    try:
+        response = message.send(to=email_to, smtp=smtp_options)
+        if response.status_code != 250:
+            return f"Failed to send email, response: {response.status_text}"
+        return "Email sent successfully"
+    except Exception as e:
+        return str(e)
