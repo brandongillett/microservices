@@ -125,6 +125,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+    env_file:
+      - .env
     develop:
       watch:
         - path: ./frontend
