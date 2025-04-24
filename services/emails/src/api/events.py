@@ -197,6 +197,7 @@ async def send_verification_event(user: UserEmails) -> None:
     verification_token = gen_email_verification_token(user.id)
 
     context = {
+        "homepage": utils_lib_settings.FRONTEND_HOST,
         "project_name": utils_lib_settings.PROJECT_NAME,
         "username": user.username,
         "verification_link": f"http://auth.localhost/verification/email/{verification_token}",

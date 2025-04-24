@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from libs.users_lib.models import Users
+from libs.users_lib.models import UserRole, Users
 
 
 # CRUD operations for Users
@@ -90,7 +90,7 @@ async def update_user_username(
 
 
 async def update_user_role(
-    session: AsyncSession, user_id: UUID, role: str, commit: bool = True
+    session: AsyncSession, user_id: UUID, role: UserRole, commit: bool = True
 ) -> Users:
     """
     Update the user role.
@@ -98,7 +98,7 @@ async def update_user_role(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
-        new_role (str): The new role.
+        role (UserRole): The new role.
         commit (bool): Commit at the end of the operation.
 
     Returns:

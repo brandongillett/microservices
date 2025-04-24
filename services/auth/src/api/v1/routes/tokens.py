@@ -2,8 +2,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from libs.auth_lib.api.deps import RoleChecker, current_user
-from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
+from libs.auth_lib.api.deps import current_user
+from libs.auth_lib.utils import GEN_ROLE_CHECKER
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.schemas import Message
 from src.crud import (
@@ -17,13 +17,11 @@ from src.schemas import (
 
 router = APIRouter()
 
-all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
-
 
 @router.get(
     "/me",
     response_model=RefreshTokensPublic,
-    dependencies=[Depends(all_roles)],
+    dependencies=[Depends(GEN_ROLE_CHECKER)],
 )
 async def get_user_refresh_tokens(
     session: async_session_dep, current_user: current_user
@@ -42,7 +40,7 @@ async def get_user_refresh_tokens(
 @router.delete(
     "/me/{token_id}",
     response_model=Message,
-    dependencies=[Depends(all_roles)],
+    dependencies=[Depends(GEN_ROLE_CHECKER)],
 )
 async def revoke_user_refresh_token(
     session: async_session_dep,
