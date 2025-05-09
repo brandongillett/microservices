@@ -22,7 +22,7 @@ env:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    if: env.CLUSTER !=  ''
+    if: secrets.STAGING_CLUSTER != ''
     steps:
       # 1) Checkout & detect changed targets
       - name: Checkout code
