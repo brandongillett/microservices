@@ -25,7 +25,9 @@ COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 COPY ./src /app/src
 
+COPY ./libs* /app/libs
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
 
-CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
+CMD ["fastapi", "run", "--workers", "1", "src/main.py"]
