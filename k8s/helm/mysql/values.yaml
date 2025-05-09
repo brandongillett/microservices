@@ -1,0 +1,16 @@
+architecture: standalone
+
+auth:
+  rootPassword: CHANGETHIS
+
+primary:
+  persistence:
+    enabled: true
+    size: 20Gi
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m

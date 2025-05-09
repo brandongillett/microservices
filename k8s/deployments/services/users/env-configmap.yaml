@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: users-env
+  namespace: default
+data:
+  # MySQL
+  MYSQL_SERVER: my-mysql.mysql.svc.cluster.local
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: USERS
+  MYSQL_USER: root
+  # RABBITMQ
+  RABBITMQ_SERVER: my-rabbitmq.rabbitmq.svc.cluster.local
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: root
