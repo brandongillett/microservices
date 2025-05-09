@@ -10,24 +10,24 @@ permissions:
   contents: read
 
 jobs:
-  precheck:
+  deploy-check:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      deploy: ${{ steps.check.outputs.deploy }}
     steps:
-      - name: Check for GCP_CREDENTIALS
+      - name: Check for Credentials
         id: check
         run: |
           if [ -z "${{ secrets.GCP_CREDENTIALS }}" ]; then
-            echo "GCP_CREDENTIALS missing. Skipping."
-            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "No GCP credentials found. Skipping deployment."
+            echo "deploy=false" >> $GITHUB_OUTPUT
           else
-            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "deploy=true" >> $GITHUB_OUTPUT
           fi
 
   build-deploy:
-    needs: precheck
-    if: needs.precheck.outputs.should_run == 'true'
+    needs: deploy-check
+    if: needs.deploy-check.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     env:
       ENVIRONMENT: staging
