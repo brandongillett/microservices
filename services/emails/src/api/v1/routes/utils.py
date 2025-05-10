@@ -6,7 +6,7 @@ router = APIRouter()
 
 
 @router.get("/health")
-@rate_limiter.limit("10/minute")
+@rate_limiter.limit("15/minute")
 async def health_check(request: Request) -> bool:
     """
     Health check endpoint.

@@ -16,13 +16,3 @@ spec:
                 name: users
                 port:
                   number: 8000
-    - host: www.users.blndly.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: users
-                port:
-                  number: 8000

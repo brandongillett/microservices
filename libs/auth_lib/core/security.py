@@ -10,6 +10,9 @@ from libs.utils_lib.core.config import settings as utils_libs_settings
 
 # Security Settings
 class security_settings(BaseSettings):
+    # Roles
+    roles: list[str] = ["user", "admin", "root"]
+
     # Hashing algorithm (for tokens)
     ALGORITHM: str = "HS256"
     # Username and password constraints

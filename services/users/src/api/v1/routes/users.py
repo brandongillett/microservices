@@ -2,13 +2,13 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from libs.auth_lib.api.deps import current_user
+from libs.auth_lib.api.deps import RoleChecker, current_user
 from libs.auth_lib.core.security import (
     is_password_complex,
     is_username_complex,
     verify_password,
 )
-from libs.auth_lib.utils import GEN_ROLE_CHECKER
+from libs.auth_lib.core.security import security_settings as auth_lib_security_settings
 from libs.users_lib.crud import get_user_by_username, update_user_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
@@ -28,8 +28,10 @@ from src.schemas import (
 
 router = APIRouter()
 
+all_roles = RoleChecker(allowed_roles=auth_lib_security_settings.roles)
 
-@router.get("/me", response_model=UserPublic, dependencies=[Depends(GEN_ROLE_CHECKER)])
+
+@router.get("/me", response_model=UserPublic, dependencies=[Depends(all_roles)])
 def my_details(current_user: current_user) -> Users:
     """
     Get the current user details.
@@ -43,7 +45,7 @@ def my_details(current_user: current_user) -> Users:
 @router.patch(
     "/me/username",
     response_model=Message,
-    dependencies=[Depends(GEN_ROLE_CHECKER)],
+    dependencies=[Depends(all_roles)],
 )
 async def update_username(
     session: async_session_dep, body: UpdateUsername, current_user: current_user
@@ -143,7 +145,7 @@ async def update_username(
 @router.patch(
     "/me/password",
     response_model=Message,
-    dependencies=[Depends(GEN_ROLE_CHECKER)],
+    dependencies=[Depends(all_roles)],
 )
 async def update_password(
     session: async_session_dep, body: UpdatePassword, current_user: current_user

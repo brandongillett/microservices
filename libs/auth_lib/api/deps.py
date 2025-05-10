@@ -142,7 +142,7 @@ current_user_token_data = Annotated[UUID, Depends(get_current_user_token_data)]
 
 
 class RoleChecker:
-    def __init__(self, allowed_roles: set[str]):
+    def __init__(self, allowed_roles: list[str]) -> None:
         self.allowed_roles = allowed_roles
 
     async def __call__(self, token_data: current_user_token_data) -> Any:
@@ -151,7 +151,7 @@ class RoleChecker:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not verified",
             )
-        if token_data.role.value in self.allowed_roles:
+        if token_data.role in self.allowed_roles:
             return True
 
         raise HTTPException(

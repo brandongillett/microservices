@@ -196,11 +196,17 @@ async def send_verification_event(user: UserEmails) -> None:
     """
     verification_token = gen_email_verification_token(user.id)
 
+    if utils_lib_settings.ENVIRONMENT == "local":
+        verification_link = "http://auth.localhost/verification/email/"
+    else:
+        verification_link = (
+            f"https://auth.{utils_lib_settings.DOMAIN}/verification/email/"
+        )
+
     context = {
-        "homepage": utils_lib_settings.FRONTEND_HOST,
         "project_name": utils_lib_settings.PROJECT_NAME,
         "username": user.username,
-        "verification_link": f"http://auth.localhost/verification/email/{verification_token}",
+        "verification_link": f"{verification_link}{verification_token}",
     }
     html = render_email_template(
         template_name="email_verification.html",

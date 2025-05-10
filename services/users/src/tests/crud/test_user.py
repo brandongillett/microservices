@@ -9,7 +9,6 @@ from libs.users_lib.crud import (
     update_user_role,
     update_user_username,
 )
-from libs.users_lib.models import UserRole
 from libs.utils_lib.tests.utils.utils import (
     random_lower_string,
 )
@@ -79,7 +78,7 @@ async def test_update_user_password(db: AsyncSession) -> None:
 async def test_update_user_role(db: AsyncSession) -> None:
     new_user = await create_random_user_helper(db)
 
-    new_role = UserRole.admin
+    new_role = "admin"
 
     updated_user = await update_user_role(
         session=db, user_id=new_user.id, role=new_role

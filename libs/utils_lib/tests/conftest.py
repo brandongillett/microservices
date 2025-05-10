@@ -23,9 +23,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture(scope="session")
 async def auth_client() -> AsyncGenerator[AsyncClient, None]:
-    auth_url = "http://auth-service:8000"
-    if settings.ENVIRONMENT != "local":
-        auth_url = f"http://auth.{settings.DOMAIN}"
+    if settings.ENVIRONMENT == "local":
+        auth_url = "http://auth-service:8000"
+    else:
+        auth_url = f"https://auth.{settings.DOMAIN}"
 
     async with AsyncClient(
         base_url=auth_url,
