@@ -20,5 +20,7 @@ class RefreshTokenBase(SQLModel):
 # Database models
 class RefreshTokens(RefreshTokenBase, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUID = Field(foreign_key="users.id", nullable=False, ondelete="CASCADE")
-    jti: UUID = Field(index=True, unique=True)
+    user_id: UUID = Field(
+        foreign_key="users.id", index=True, nullable=False, ondelete="CASCADE"
+    )
+    jti: UUID = Field(index=True, unique=True, nullable=False)

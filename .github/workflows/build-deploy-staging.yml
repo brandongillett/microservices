@@ -15,11 +15,11 @@ jobs:
     outputs:
       deploy: ${{ steps.check.outputs.deploy }}
     steps:
-      - name: Check for Credentials
+      - name: Check for Kubernetes Config
         id: check
         run: |
-          if [ -z "${{ secrets.GCP_CREDENTIALS }}" ]; then
-            echo "No GCP credentials found. Skipping deployment."
+          if [ -z "${{ secrets.STAGING_KUBE_CONFIG }}" ]; then
+            echo "No Kubernetes Config Found... Skipping deployment."
             echo "deploy=false" >> $GITHUB_OUTPUT
           else
             echo "deploy=true" >> $GITHUB_OUTPUT
@@ -30,18 +30,38 @@ jobs:
     if: needs.deploy-check.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     env:
+      # App settings
       ENVIRONMENT: staging
       DOMAIN: ${{ secrets.STAGING_DOMAIN }}
       PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
-      FRONTEND_HOST: ${{ secrets.STAGING_FRONTEND_HOST }}
-      CLUSTER: ${{ secrets.STAGING_CLUSTER }}
-      REGION: ${{ secrets.STAGING_REGION }}
+      FRONTEND_HOST: https://${{ secrets.STAGING_DOMAIN }}
+      VITE_API_URL: https://api.${{ secrets.STAGING_DOMAIN }}
+      # Build settings
       STACK_NAME: ${{ secrets.STAGING_STACK_NAME }}
+      DOCKER_PLATFORMS: linux/arm64 # ex. linux/amd64,linux/arm64
       BUILD_TAG: ${{ github.sha }}
+      # Kubernetes settings
+      NAMESPACE: microservices-prd
+      DATABASE_NAMESPACE: microservices-db-prd
+      # Replica settings
+      # Frontend
+      FRONTEND_REPLICAS: 2
+      # Services
+      AUTH_REPLICAS: 2
+      USERS_REPLICAS: 2
+      EMAILS_REPLICAS: 2
+      # Schedulers
+      AUTH_SCHEDULER_REPLICAS: 2
+      USERS_SCHEDULER_REPLICAS: 2
+      EMAILS_SCHEDULER_REPLICAS: 2
+      # Workers
+      AUTH_WORKER_REPLICAS: 2
+      USERS_WORKER_REPLICAS: 2
+      EMAILS_WORKER_REPLICAS: 2
     steps:
       # 1) Checkout & detect changed targets
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -54,7 +74,7 @@ jobs:
           for f in "${files[@]}"; do
             case "$f" in
               # any change in frontend code or its k8s manifests
-              frontend/*|k8s/deployments/frontend/*)
+              frontend/*|k8s/frontend/*)
                 build_frontend=true
                 ;;
               # any change in libs (rebuild all services)
@@ -71,8 +91,8 @@ jobs:
                 services+=( "$svc" )
                 ;;
               # any change in one of the services' k8s manifests
-              k8s/deployments/services/*)
-                svc=${f#k8s/deployments/services/}
+              k8s/services/*)
+                svc=${f#k8s/services/}
                 svc=${svc%%/*}
                 services+=( "$svc" )
                 ;;
@@ -95,12 +115,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Sign in to Google Cloud
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          driver: cloud # Cloud Build is optional, but best workaround for arm builds
+          endpoint: "${{ secrets.DOCKER_USERNAME }}/cloud"
+          install: true
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
@@ -119,8 +139,7 @@ jobs:
             image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
             echo "→ Building $svc with image: $image"
             cp -r libs services/$svc/
-            docker build -t "$image" services/$svc
-            docker push "$image"
+            docker buildx build --platform $DOCKER_PLATFORMS -t "$image" --push services/$svc/
             rm -rf services/$svc/libs
           done
 
@@ -130,39 +149,48 @@ jobs:
         run: |
           image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
           echo "→ Building frontend with image: $image"
-          docker build -t "$image" frontend
-          docker push "$image"
+          docker buildx build \
+            --platform $DOCKER_PLATFORMS \
+            --build-arg VITE_API_URL=${VITE_API_URL} \
+            -t "$image" \
+            --push frontend
 
-      # 5) Configure kubectl for GKE
-      - name: Set up GKE credentials
-        uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ${{ env.CLUSTER }}
-          location: ${{ env.REGION }}
+      # 5) Configure kubectl with config
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.STAGING_KUBE_CONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Set up kubectl secrets
         run: |
-          kubectl create secret generic mysql-secrets \
-            --from-literal=MYSQL_PASSWORD="${{ secrets.STAGING_MYSQL_PASSWORD }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret docker-registry docker-creds \
+            --docker-server="https://index.docker.io/v1/" \
+            --docker-username="${{ secrets.DOCKER_USERNAME }}" \
+            --docker-password="${{ secrets.DOCKER_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
-          kubectl create secret generic rabbitmq-secrets \
-            --from-literal=RABBITMQ_PASSWORD="${{ secrets.STAGING_RABBITMQ_PASSWORD }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic postgres-secrets \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.STAGING_POSTGRES_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+          kubectl create secret generic nats-secrets \
+            --from-literal=NATS_URL="${{ secrets.STAGING_NATS_URL }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
           kubectl create secret generic redis-secrets \
             --from-literal=AUTH_REDIS_URL="${{ secrets.STAGING_AUTH_REDIS_URL }}" \
             --from-literal=USERS_REDIS_URL="${{ secrets.STAGING_USERS_REDIS_URL }}" \
             --from-literal=EMAILS_REDIS_URL="${{ secrets.STAGING_EMAILS_REDIS_URL }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
           kubectl create secret generic service-secrets \
             --from-literal=ROOT_USER_PASSWORD="${{ secrets.STAGING_ROOT_USER_PASSWORD }}" \
             --from-literal=SECRET_KEY="${{ secrets.STAGING_SECRET_KEY }}" \
             --from-literal=SMTP_PASSWORD="${{ secrets.STAGING_SMTP_PASSWORD }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
-      # 6) Deploy changed services to EKS
+      # 6) Deploy changed services
       - name: Deploy services to Kubernetes
         if: steps.detect.outputs.services != ''
         run: |
@@ -170,17 +198,17 @@ jobs:
           for svc in "${SVCS[@]}"; do
             export IMAGE=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
             echo "→ Deploying $svc with image: $IMAGE"
-            for manifest in k8s/deployments/services/$svc/*; do
-              envsubst < "$manifest" | kubectl apply -f -
+            for manifest in k8s/services/$svc/*; do
+              envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
             done
           done
 
-      # 7) Deploy frontend to EKS
+      # 7) Deploy frontend
       - name: Deploy frontend to Kubernetes
         if: steps.detect.outputs.build_frontend == 'true'
         run: |
           export IMAGE=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
           echo "→ Deploying frontend with image: $IMAGE"
-          for manifest in k8s/deployments/frontend/*; do
-            envsubst < "$manifest" | kubectl apply -f -
+          for manifest in k8s/frontend/*; do
+            envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
           done

@@ -1,14 +1,15 @@
 from email.message import EmailMessage
+from email.utils import formataddr
 from typing import Any
 
 import aiosmtplib
 from pydantic_settings import BaseSettings
-from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
+from taskiq import PrometheusMiddleware, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq_redis import RedisStreamBroker
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
-from libs.utils_lib.core.rabbitmq import rabbitmq
+from libs.utils_lib.core.faststream import nats
 from libs.utils_lib.core.redis import redis_client
 from libs.utils_lib.core.taskiq import result_backend, schedule_source
 from libs.utils_lib.tasks import (
@@ -48,8 +49,12 @@ class tasks_settings(BaseSettings):
 
 tasks_settings = tasks_settings()  # type: ignore
 
-broker = RedisStreamBroker(utils_lib_settings.REDIS_URL).with_result_backend(
-    result_backend
+broker = (
+    RedisStreamBroker(utils_lib_settings.REDIS_URL)
+    .with_result_backend(result_backend)
+    .with_middlewares(
+        PrometheusMiddleware(server_addr="0.0.0.0", server_port=9000),
+    )
 )
 
 scheduler = TaskiqScheduler(broker, sources=[schedule_source])
@@ -60,7 +65,7 @@ async def startup(state: TaskiqState) -> None:
     _ = state  # Unused variable
     await session_manager.init_db()
     await redis_client.connect()
-    await rabbitmq.start()
+    await nats.start()
 
 
 @broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)
@@ -68,7 +73,7 @@ async def shutdown(state: TaskiqState) -> None:
     _ = state  # Unused variable
     await session_manager.close()
     await redis_client.close()
-    await rabbitmq.close()
+    await nats.close()
 
 
 @broker.task
@@ -117,8 +122,15 @@ async def send_email(email_to: str, subject: str, html: str) -> str:
         subject (str): The subject of the email.
         html (str): The HTML content of the email.
     """
+    if utils_lib_settings.ENVIRONMENT in ["local", "staging"] and email_to.endswith(
+        "@test-account.com"
+    ):
+        return "Email sending skipped for test account"
+
     message = EmailMessage()
-    message["From"] = settings.EMAILS_FROM_EMAIL
+    message["From"] = formataddr(
+        (settings.EMAILS_FROM_NAME, settings.EMAILS_FROM_EMAIL)
+    )
     message["To"] = email_to
     message["Subject"] = subject
     message.set_content(html, subtype="html")

@@ -1,18 +1,28 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import path from "node:path";
+import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
+import react from "@vitejs/plugin-react-swc";
+import { defineConfig } from "vite";
 
-// https://vite.dev/config/
-export default defineConfig({
-  base: '/',
-  plugins: [react()],
-  preview: {
-   port: 80,
-   strictPort: true,
-  },
-  server: {
-   port: 80,
-   strictPort: true,
-   host: true,
-   origin: "http://0.0.0.0:80",
-  },
-})
+export default defineConfig(({ mode, command }) => {
+	const isDev = mode === "development" || command === "serve";
+
+	return {
+		resolve: {
+			alias: {
+				"@": path.resolve(__dirname, "./src"),
+			},
+		},
+		plugins: [react(), TanStackRouterVite()],
+		preview: {
+			port: 80,
+			strictPort: true,
+		},
+		server: {
+			port: 80,
+			strictPort: true,
+			host: true,
+			origin: "http://0.0.0.0:80",
+			...(isDev ? { allowedHosts: true } : {}),
+		},
+	};
+});

@@ -4,30 +4,38 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from faststream.rabbit import RabbitQueue
-from faststream.rabbit.fastapi import RabbitRouter
+from faststream.nats.fastapi import NatsRouter
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.utils_lib.api.deps import async_session_dep
-from libs.utils_lib.core.rabbitmq import rabbitmq
+from libs.utils_lib.core.faststream import nats
 from libs.utils_lib.crud import (
     create_inbox_event,
     get_inbox_event,
     get_outbox_event,
 )
 from libs.utils_lib.models import EventOutbox, EventStatus
-from libs.utils_lib.schemas import AcknowledgementEvent
+from libs.utils_lib.schemas import AcknowledgementEvent, EventRoute
 from src.core.config import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-rabbit_router = RabbitRouter()
+nats_router = NatsRouter()
+
+ACK_ROUTE = EventRoute(
+    service=settings.SERVICE_NAME,
+    name="ack",
+    stream_name=nats.stream,
+)
 
 
-@rabbit_router.subscriber(
-    RabbitQueue(name=f"{settings.SERVICE_NAME}_acknowledgements", durable=True)
+@nats_router.subscriber(
+    subject=ACK_ROUTE.subject,
+    stream=ACK_ROUTE.stream,
+    pull_sub=ACK_ROUTE.pull_sub,
+    durable=ACK_ROUTE.durable,
 )
 async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> None:
     """
@@ -35,7 +43,7 @@ async def ack_event(session: async_session_dep, ack: AcknowledgementEvent) -> No
 
     Args:
         session: The database session.
-        acknowledgement: The acknowledgement event.
+        ack: The acknowledgement event.
     """
     try:
         event = await get_outbox_event(session, ack.event_id)
@@ -77,14 +85,14 @@ async def send_ack(
         processed_state: The state of the event processing.
         processed_at: The timestamp when the event was processed.
     """
-    await rabbitmq.broker.publish(
+    await nats.broker.publish(
         AcknowledgementEvent(
             event_id=event_id,
             status=status,
             processed_at=processed_at,
             error_message=error_message,
         ),
-        queue=f"{service}_acknowledgements",
+        subject=ACK_ROUTE.subject_for(service),
     )
 
 
@@ -181,7 +189,7 @@ async def handle_publish_event(
     event_schema: BaseModel,
 ) -> EventOutbox:
     """
-    Handles the publishing of events to RabbitMQ.
+    Handles the publishing of events to the broker.
 
     Args:
         session: The database session.
@@ -192,9 +200,7 @@ async def handle_publish_event(
         EventOutbox: The event outbox record.
     """
     try:
-        await rabbitmq.broker.publish(
-            event_schema, queue=event.event_type, persist=True
-        )
+        await nats.broker.publish(event_schema, subject=event.event_type)
     except Exception as e:
         log = f"Error publishing event: {event.id} - {str(e)}"
 

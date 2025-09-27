@@ -130,7 +130,7 @@ async def test_update_password(
     assert user is not None, "User not found"
 
     assert update_response.status_code == 200
-    assert verify_password(new_password, user.password)
+    assert await verify_password(new_password, user.password)
 
 
 @pytest.mark.anyio

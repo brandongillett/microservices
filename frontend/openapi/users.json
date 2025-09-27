@@ -1,0 +1,489 @@
+{
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Message": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "Message",
+        "type": "object"
+      },
+      "UpdatePassword": {
+        "properties": {
+          "current_password": {
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "UpdatePassword",
+        "type": "object"
+      },
+      "UpdateUserRole": {
+        "properties": {
+          "new_role": {
+            "title": "New Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_role"
+        ],
+        "title": "UpdateUserRole",
+        "type": "object"
+      },
+      "UpdateUsername": {
+        "properties": {
+          "new_username": {
+            "title": "New Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_username"
+        ],
+        "title": "UpdateUsername",
+        "type": "object"
+      },
+      "UserPublic": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disabled": {
+            "default": false,
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "email": {
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole",
+            "default": "user"
+          },
+          "username": {
+            "maxLength": 22,
+            "minLength": 3,
+            "title": "Username",
+            "type": "string"
+          },
+          "verified": {
+            "default": false,
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "id"
+        ],
+        "title": "UserPublic",
+        "type": "object"
+      },
+      "UserRole": {
+        "enum": [
+          "user",
+          "admin",
+          "root"
+        ],
+        "title": "UserRole",
+        "type": "string"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "http://api.localhost/auth/login"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "description": "\n    A REST API service for user management.\n\n    This REST API:\n    - Allows users to view their account details.\n    - Allows users to update their account details.\n    ",
+    "title": "Microservices [users]",
+    "version": "latest"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/management/roles": {
+      "get": {
+        "description": "Get the available roles.\n\nArgs:\n    user_token (TokenData): The user's token data.\n\nReturns:\n    list: The available roles.",
+        "operationId": "get_roles_management_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Roles Management Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Roles",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/management/users": {
+      "get": {
+        "description": "Get the user data.\n\nArgs:\n    session (AsyncSession): The database session.\n    user_token (TokenData): The user's token data.\n    username_email (str): The username or email of the user.\n\nReturns:\n    UserPublic: The user data.",
+        "operationId": "get_user_data_management_users_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username_email",
+            "required": true,
+            "schema": {
+              "title": "Username Email",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get User Data",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/management/users/{user_id}/role": {
+      "patch": {
+        "description": "Update the user role.\n\nArgs:\n    session (AsyncSession): The database session.\n    user_token (TokenData): The user's token data.\n    user_id (UUID): The user ID to update.\n    body (UpdateUserRole): The request body containing the new role.\n\nReturns:\n    bool: True",
+        "operationId": "update_role_management_users__user_id__role_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Role",
+        "tags": [
+          "management"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "Get the current user details.\n\nArgs:\n    session (AsyncSession): The database session.\n    user_token (TokenData): The user's token data.\n\nReturns:\n    UserPublic: The current user details.",
+        "operationId": "my_details_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPublic"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "My Details",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/password": {
+      "patch": {
+        "description": "Update the current user password.\n\nArgs:\n    session (AsyncSession): The database session.\n    body (UpdatePassword): The request body.\n    user_token (TokenData): The user's token data.\n\nReturns:\n    Message: The response message.",
+        "operationId": "update_password_me_password_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePassword"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Password",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/me/username": {
+      "patch": {
+        "description": "Update the current user username.\n\nArgs:\n    session (AsyncSession): The database session.\n    body (UpdateUsername): The request body.\n    user_token (TokenData): The user's token data.\n\nReturns:\n    Message: The response message.",
+        "operationId": "update_username_me_username_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUsername"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Username",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/utils/health": {
+      "get": {
+        "description": "Health check endpoint.\n\nReturns:\n    bool: True",
+        "operationId": "health_check_utils_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Health Check Utils Health Get",
+                  "type": "boolean"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "utils"
+        ]
+      }
+    },
+    "/utils/version": {
+      "get": {
+        "description": "Get the API version.\n\nReturns:\n    str: The API version.",
+        "operationId": "version_utils_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Version Utils Version Get",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Version",
+        "tags": [
+          "utils"
+        ]
+      }
+    }
+  }
+}

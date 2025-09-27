@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xml:lang="en" lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <meta name="x-apple-disable-message-reformatting">
+
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark only">
+
+  <style type="text/css">
+    :root {
+      color-scheme: light dark;
+      supported-color-schemes: light dark;
+    }
+
+    /* Style Variables */
+    {% set primaryColor = tokens.color.brand.primary.value %}
+
+    /* Font import */
+    @media screen {
+      @font-face {
+        font-family: '{{ tokens.typography.fonts.brand.name.value }}';
+        font-style: {{ tokens.typography.fonts.brand.weights.regular.style.value }};
+        font-weight: {{ tokens.typography.fonts.brand.weights.regular.weight.value }};
+        src: local('{{ tokens.typography.fonts.brand.name.value }} Regular'), local('{{ tokens.typography.fonts.brand.weights.regular.name.value }}'),
+            url('{{ assets_url }}{{ tokens.typography.fonts.brand.weights.regular.files.woff.value }}') format('woff');
+      }
+      @font-face {
+        font-family: '{{ tokens.typography.fonts.brand.name.value }}';
+        font-style: {{ tokens.typography.fonts.brand.weights.bold.style.value }};
+        font-weight: {{ tokens.typography.fonts.brand.weights.bold.weight.value }};
+        src: local('{{ tokens.typography.fonts.brand.name.value }} Bold'), local('{{ tokens.typography.fonts.brand.weights.bold.name.value }}'),
+            url('{{ assets_url }}{{ tokens.typography.fonts.brand.weights.bold.files.woff.value }}') format('woff');
+      }
+    }
+    /* Reset */
+    body, table, td, a {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-rspace: 0pt;
+      mso-table-lspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      height: auto;
+      line-height: 100%;
+      text-decoration: none;
+    }
+    a[x-apple-data-detectors] {
+      font-family: inherit !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+      line-height: inherit !important;
+    }
+    div[style*="margin: 16px 0;"] {
+      margin: 0 !important;
+    }
+    body {
+      width: 100% !important;
+      height: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      background-color: #f7f7f7;
+      color: #333;
+      font-family: '{{ tokens.typography.fonts.brand.name.value }}', sans-serif, Arial;
+      font-size: {{ tokens.typography.fontSizes.md.value }};
+      line-height: 24px;
+    }
+    /* Headings */
+    h1 {
+      font-size: {{ tokens.typography.fontSizes['2xl'].value }};
+      font-weight: {{ tokens.typography.fonts.brand.weights.bold.weight.value }};
+      color: #111;
+      letter-spacing: -1px;
+      line-height: 48px;
+      margin: 0;
+    }
+    p {
+      font-size: 15px;
+      color: #444;
+      text-align: left;
+      line-height: 1.6;
+    }
+    table {
+      border-collapse: collapse !important;
+    }
+    /* Container */
+    .email-container {
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .footer {
+      font-size: {{ tokens.typography.fontSizes.sm.value }};
+      color: #444;
+      text-align: left;
+      line-height: 1.5;
+      margin-top: 20px;
+    }
+    {% block styles %}
+    <!-- Additional styles go here -->
+    {% endblock %}
+  </style>
+</head>
+<body>
+  <!-- Preview text (hidden) -->
+  <div class="preheader" style="display:none; max-height:0; max-width:0; overflow:hidden; font-size:1px; line-height:1px; color:#fff; opacity:0;">
+    {{ title }}
+  </div>
+
+  <table role="presentation" class="email-container" cellspacing="0" cellpadding="0"
+    bgcolor="#ffffff"
+    style="margin: 40px auto 0 auto; width: 100%; max-width: 600px;">
+
+    <!-- Logo -->
+    <tr>
+      <td align="center" style="padding-top: 36px; padding-bottom: 24px;">
+        <a href="{{ project_url }}" target="_blank" style="display: inline-block; text-decoration: none; color: {{ primaryColor }};">
+          <img src="{{ logo_url }}" alt="{{ project_name }} Logo" width="48" style="display: block;" />
+        </a>
+      </td>
+    </tr>
+
+    <!-- Header -->
+    <tr>
+      <td style="padding-left: 24px;">
+        <h1>{{ title }}</h1>
+      </td>
+    </tr>
+
+    <tr>
+      <td><div style="border-top: 2px solid #eaeaea; margin: 25px 0;"></div></td>
+    </tr>
+
+    <!-- Body content -->
+    <tr>
+      <td style="padding: 24px;">
+        {% block body %}
+        <!-- Body content goes here -->
+        {% endblock %}
+
+         <!-- Signature -->
+        {% if show_signature %}
+        <p style="padding-top: 24px; margin-bottom: 0;">
+          Thanks,
+          <br />
+          - {{ project_name }} Team
+        </p>
+        {% endif %}
+      </td>
+    </tr>
+
+    <tr>
+      <td><div style="border-top: 2px solid #eaeaea; margin: 25px 0;"></div></td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding-left: 24px; padding-bottom: 24px;">
+        <p class="footer">
+          {{ project_name }}
+          &nbsp;&nbsp;•&nbsp;&nbsp;
+          <a href="{{ project_url }}" target="_blank" style="text-decoration: none; color: {{ primaryColor }};">
+            {{ project_url | replace('http://', '') | replace('https://', '') }}
+          </a>
+          {% if show_unsubscribe %}
+            &nbsp;&nbsp;•&nbsp;&nbsp;
+            <a href="{{ unsubscribe_url }}" target="_blank" style="text-decoration: none; color: {{ primaryColor }};">Unsubscribe</a>
+          {% endif %}
+        </p>
+      </td>
+    </tr>
+
+  </table>
+</body>
+</html>

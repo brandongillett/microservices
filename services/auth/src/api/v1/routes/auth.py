@@ -2,35 +2,47 @@ from datetime import datetime, timedelta
 from typing import Annotated, Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from libs.auth_lib.api.events import CREATE_USER_ROUTE, FORGOT_PASSWORD_SEND_ROUTE
 from libs.auth_lib.core.security import (
     is_email_valid,
     is_password_complex,
-    is_username_complex,
+    is_username_valid,
+    verify_password,
 )
 from libs.auth_lib.schemas import (
     CreateUserEvent,
+    ForgotPasswordSendEvent,
     TokenData,
 )
-from libs.users_lib.crud import get_user, get_user_by_email, get_user_by_username
-from libs.users_lib.schemas import UserPublic
+from libs.auth_lib.utils import (
+    gen_password_reset_token,
+    invalidate_password_reset_token,
+    verify_password_reset_token,
+)
+from libs.users_lib.api.events import PASSWORD_UPDATED_ROUTE, UPDATE_PASSWORD_ROUTE
+from libs.users_lib.crud import (
+    get_user,
+    get_user_by_email,
+    get_user_by_username,
+    update_user_password,
+)
+from libs.users_lib.schemas import (
+    UpdateUserPasswordEvent,
+    UserPasswordUpdatedEvent,
+    UserPublic,
+)
 from libs.utils_lib.api.deps import async_session_dep, client_ip_dep
 from libs.utils_lib.api.events import handle_publish_event
 from libs.utils_lib.core.config import settings as utils_lib_settings
-from libs.utils_lib.core.security import rate_limiter
+from libs.utils_lib.core.limiter import Limiter
 from libs.utils_lib.crud import create_outbox_event
 from libs.utils_lib.schemas import Message
 from src.api.config import api_settings
-from src.api.deps import consumed_refresh_token
-from src.core.security import (
-    gen_token,
-    get_login_attempts,
-    increment_login_attempts,
-    reset_login_attempts,
-    security_settings,
-)
+from src.api.deps import consumed_refresh_token, get_valid_user
+from src.core.security import gen_token
 from src.crud import (
     authenticate_user,
     create_refresh_token,
@@ -38,16 +50,17 @@ from src.crud import (
     delete_max_tokens,
     get_refresh_tokens,
 )
-from src.schemas import RefreshTokenCreate, Token, UserCreate
+from src.schemas import RefreshTokenCreate, ResetPassword, Token, UserCreate
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserPublic)
-@rate_limiter.limit("10/minute; 30/hour")
-async def register(
-    request: Request, session: async_session_dep, user: UserCreate
-) -> Any:
+@router.post(
+    "/register",
+    response_model=UserPublic,
+    dependencies=[Depends(Limiter("5/minute,25/hour,50/day"))],
+)
+async def register(session: async_session_dep, user: UserCreate) -> Any:
     """
     Register a new user.
 
@@ -59,10 +72,8 @@ async def register(
     Returns:
         UserPublic: The user data.
     """
-    _ = request  # Unused variable (mandatory for rate limiter)
-
     # Check if email, username, and password meet the required complexity
-    username_complexity = is_username_complex(user.username)
+    username_complexity = is_username_valid(user.username)
     if username_complexity:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=username_complexity
@@ -95,59 +106,63 @@ async def register(
     # Create the user
     new_user = await create_user(session, user_create=user, commit=False)
 
-    # Create create user event
-    create_user_event_id = uuid4()
-    create_user_event_schema = CreateUserEvent(
-        event_id=create_user_event_id, user=new_user
+    # Create event for user creation
+    event_users_create_user_id = uuid4()
+    event_users_create_user_schema = CreateUserEvent(
+        event_id=event_users_create_user_id, user=new_user
     )
 
-    create_user_event = await create_outbox_event(
+    event_users_create_user = await create_outbox_event(
         session=session,
-        event_id=create_user_event_id,
-        event_type="users_service_create_user",
-        data=create_user_event_schema.model_dump(mode="json"),
+        event_id=event_users_create_user_id,
+        event_type=CREATE_USER_ROUTE.subject_for("users"),
+        data=event_users_create_user_schema.model_dump(mode="json"),
         commit=False,
     )
 
     # Create create user email event
-    create_user_email_event_id = uuid4()
-    create_user_email_event_schema = CreateUserEvent(
-        event_id=create_user_email_event_id, user=new_user
+    event_emails_create_user_id = uuid4()
+    event_emails_create_user_schema = CreateUserEvent(
+        event_id=event_emails_create_user_id, user=new_user
     )
 
-    create_user_email_event = await create_outbox_event(
+    event_emails_create_user = await create_outbox_event(
         session=session,
-        event_id=create_user_email_event_id,
-        event_type="emails_service_create_user",
-        data=create_user_email_event_schema.model_dump(mode="json"),
+        event_id=event_emails_create_user_id,
+        event_type=CREATE_USER_ROUTE.subject_for("emails"),
+        data=event_emails_create_user_schema.model_dump(mode="json"),
         commit=False,
     )
 
     # Commit and refresh the user
     await session.commit()
     await session.refresh(new_user)
-    await session.refresh(create_user_event)
-    await session.refresh(create_user_email_event)
+    await session.refresh(event_users_create_user)
+    await session.refresh(event_emails_create_user)
 
     # Publish the events
     await handle_publish_event(
-        session=session, event=create_user_event, event_schema=create_user_event_schema
+        session=session,
+        event=event_users_create_user,
+        event_schema=event_users_create_user_schema,
     )
     await handle_publish_event(
         session=session,
-        event=create_user_email_event,
-        event_schema=create_user_email_event_schema,
+        event=event_emails_create_user,
+        event_schema=event_emails_create_user_schema,
     )
 
     # Return the user data
     return new_user
 
 
-@router.post("/login", response_model=Token)
-@rate_limiter.limit("1/second; 10/minute")
+@router.post(
+    "/login",
+    response_model=Token,
+    dependencies=[Depends(Limiter("10/minute,50/hour,200/day"))],
+)
 async def login(
     response: Response,
-    request: Request,
     ip_address: client_ip_dep,
     session: async_session_dep,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -165,46 +180,20 @@ async def login(
     Returns:
         Token: The access token.
     """
-    _ = request  # Unused variable (mandatory for rate limiter)
-
-    # Check if user has exceeded the maximum number of failed login attempts
-    if (
-        await get_login_attempts(form_data.username)
-        >= security_settings.MAX_FAILED_LOGIN_ATTEMPTS
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Too many failed login attempts (Please try again later)",
-        )
-
     # Try to authenticate the user with the provided credentials
     user = await authenticate_user(
         session=session, username_email=form_data.username, password=form_data.password
     )
     if not user:
-        # Increment the number of failed login attempts
-        current_attempts = await increment_login_attempts(form_data.username)
-        remaining_attempts = (
-            security_settings.MAX_FAILED_LOGIN_ATTEMPTS - current_attempts
-        )
-        invalid_message = (
-            f"Invalid login attempt ({remaining_attempts} attempts left)"
-            if current_attempts > 1
-            else "Invalid login attempt"
-        )
-
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=invalid_message,
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Reset the number of failed login attempts
-    await reset_login_attempts(form_data.username)
-
     if user.disabled:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User inactive"
         )
 
     if utils_lib_settings.REQUIRE_USER_VERIFICATION and not user.verified:
@@ -220,7 +209,7 @@ async def login(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token_data = TokenData(
-        user_id=user.id, role=user.role, verified=user.verified, type="access"
+        user_id=user.id, role=user.role.value, verified=user.verified, type="access"
     )
     access_token, _ = gen_token(
         data=access_token_data,
@@ -232,7 +221,7 @@ async def login(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     refresh_token_data = TokenData(
-        user_id=user.id, role=user.role, verified=user.verified, type="refresh"
+        user_id=user.id, role=user.role.value, verified=user.verified, type="refresh"
     )
     refresh_token, refresh_jti = gen_token(
         data=refresh_token_data,
@@ -268,7 +257,11 @@ async def login(
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/logout", response_model=Message)
+@router.post(
+    "/logout",
+    response_model=Message,
+    dependencies=[Depends(Limiter("20/minute,100/hour"))],
+)
 async def logout(
     session: async_session_dep, consumed_refresh_token: consumed_refresh_token
 ) -> Message:
@@ -291,7 +284,11 @@ async def logout(
     return Message(message=f"Logged out of {user.username}")
 
 
-@router.post("/token/refresh", response_model=Token)
+@router.post(
+    "/token/refresh",
+    response_model=Token,
+    dependencies=[Depends(Limiter("10/minute,60/hour"))],
+)
 async def refresh_access_token(
     response: Response,
     ip_address: client_ip_dep,
@@ -310,11 +307,8 @@ async def refresh_access_token(
     Returns:
         Token: The access token.
     """
-    user = await get_user(session, user_id=consumed_refresh_token.user_id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+    user = await get_valid_user(session=session, user_id=consumed_refresh_token.user_id)
+
     current_time = datetime.utcnow()
 
     # Create a new access token
@@ -322,7 +316,7 @@ async def refresh_access_token(
         minutes=api_settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
     access_token_data = TokenData(
-        user_id=user.id, role=user.role, verified=user.verified, type="access"
+        user_id=user.id, role=user.role.value, verified=user.verified, type="access"
     )
     access_token, _ = gen_token(
         data=access_token_data,
@@ -334,7 +328,7 @@ async def refresh_access_token(
         days=api_settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
     refresh_token_data = TokenData(
-        user_id=user.id, role=user.role, verified=user.verified, type="refresh"
+        user_id=user.id, role=user.role.value, verified=user.verified, type="refresh"
     )
     refresh_token, refresh_jti = gen_token(
         data=refresh_token_data,
@@ -363,3 +357,156 @@ async def refresh_access_token(
     )
 
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.post(
+    "/password/forgot",
+    response_model=Message,
+    dependencies=[Depends(Limiter("5/minute,15/hour,25/day"))],
+)
+async def send_forgot_password(
+    session: async_session_dep, username_email: str
+) -> Message:
+    """
+    Send a password reset email.
+
+    Args:
+        session (AsyncSession): The database session.
+
+    Returns:
+        Message: The response message.
+    """
+
+    # Check if the username or email exists
+    if "@" in username_email:
+        user = await get_valid_user(session=session, email=username_email)
+    else:
+        user = await get_valid_user(session=session, username=username_email)
+
+    # Generate password reset token
+    reset_token = await gen_password_reset_token(user.id)
+
+    # Create forgot password event
+    event_emails_send_forgot_password_id = uuid4()
+    event_emails_send_forgot_password_schema = ForgotPasswordSendEvent(
+        event_id=event_emails_send_forgot_password_id,
+        user_id=user.id,
+        token=reset_token,
+    )
+
+    event_emails_send_forgot_password = await create_outbox_event(
+        session=session,
+        event_id=event_emails_send_forgot_password_id,
+        event_type=FORGOT_PASSWORD_SEND_ROUTE.subject_for("emails"),
+        data=event_emails_send_forgot_password_schema.model_dump(mode="json"),
+        commit=False,
+    )
+
+    await session.commit()
+    await session.refresh(event_emails_send_forgot_password)
+
+    # Publish the event
+    await handle_publish_event(
+        session=session,
+        event=event_emails_send_forgot_password,
+        event_schema=event_emails_send_forgot_password_schema,
+    )
+
+    return Message(message=f"Password reset email sent to {user.email}")
+
+
+@router.post(
+    "/password/reset",
+    response_model=Message,
+    dependencies=[Depends(Limiter("5/minute,15/hour,25/day"))],
+)
+async def reset_password(session: async_session_dep, body: ResetPassword) -> Message:
+    """
+    Reset user password.
+
+    Args:
+        session (AsyncSession): The database session.
+        token (str): The password reset token.
+        body (ResetPassword): Body containing the new password.
+
+    Returns:
+        Message: The response message.
+    """
+    # Verify the password reset token
+    user_id, token_id = await verify_password_reset_token(body.token)
+
+    user = await get_valid_user(session=session, user_id=user_id)
+
+    # Check if the current password is same as the new password
+    if await verify_password(body.new_password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="New password cannot be same as the current password",
+        )
+
+    # Check password complexity
+    password_complexity = is_password_complex(body.new_password)
+    if password_complexity:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=password_complexity
+        )
+
+    # Update the user password
+    user = await update_user_password(
+        session=session,
+        user_id=user.id,
+        new_password=body.new_password,
+        commit=False,
+    )
+
+    # Users password updated event
+    event_users_update_password_id = uuid4()
+    event_users_update_password_schema = UpdateUserPasswordEvent(
+        event_id=event_users_update_password_id,
+        user_id=user.id,
+        new_password=user.password,
+    )
+
+    event_users_update_password = await create_outbox_event(
+        session=session,
+        event_id=event_users_update_password_id,
+        event_type=UPDATE_PASSWORD_ROUTE.subject_for("users"),
+        data=event_users_update_password_schema.model_dump(mode="json"),
+        commit=False,
+    )
+
+    # Emails password updated event
+    event_emails_password_updated_id = uuid4()
+    event_emails_password_updated_schema = UserPasswordUpdatedEvent(
+        event_id=event_emails_password_updated_id, user=user
+    )
+
+    event_emails_password_updated = await create_outbox_event(
+        session=session,
+        event_id=event_emails_password_updated_id,
+        event_type=PASSWORD_UPDATED_ROUTE.subject_for("emails"),
+        data=event_emails_password_updated_schema.model_dump(mode="json"),
+        commit=False,
+    )
+
+    await invalidate_password_reset_token(token_id)
+
+    await session.commit()
+    await session.refresh(user)
+    await session.refresh(event_users_update_password)
+    await session.refresh(event_emails_password_updated)
+
+    # Publish events
+    await handle_publish_event(
+        session=session,
+        event=event_users_update_password,
+        event_schema=event_users_update_password_schema,
+    )
+
+    await handle_publish_event(
+        session=session,
+        event=event_emails_password_updated,
+        event_schema=event_emails_password_updated_schema,
+    )
+
+    return Message(message="Password has been reset successfully")

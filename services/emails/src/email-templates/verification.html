@@ -1,0 +1,38 @@
+{% set title = "Email Verification" %}
+
+{% extends "base.html" %}
+
+{% set show_signature = true %}
+{% set show_unsubscribe = false %}
+
+{% block styles %}
+
+    .btn-primary {
+      background-color: {{ tokens.color.brand.primary.value }};
+      color: {{ tokens.color.foreground.default.value }} !important;
+      padding: 16px 36px;
+      border-radius: 9999px;
+      display: inline-block;
+      font-weight: {{ tokens.typography.fonts.brand.weights.bold.weight.value }};
+      font-size: {{ tokens.typography.fontSizes.md.value }};
+    }
+    .btn-primary:hover {
+      background-color: {{ tokens.color.brand.primaryDark.value }};
+      color: {{ tokens.color.foreground.default.value }} !important;
+    }
+
+{% endblock %}
+
+{% block body %}
+  <p style="margin: 0 0 25px;">Hi {{ username }},</p>
+  <p style="margin: 0 0 25px;">Tap the button below to verify your email address. If you didn't create an account with <a href="{{ project_url }}" style="text-decoration: none; color: {{ primaryColor }};">{{ project_name }}</a>, you can disregard this email.</p>
+
+  <p style="text-align:center; margin: 32px 0;">
+    <a href="{{ verification_link }}" class="btn-primary" target="_blank" style="text-decoration: none;">Verify Email</a>
+  </p>
+
+
+  <p>If the button above doesn't work, you can copy and paste the following URL into your browser. For security, this link will expire in {{ token_expiration }} minutes:</p>
+  <p style="word-wrap: break-word; max-width: 100%;"><a href="{{ verification_link }}" target="_blank" style="word-wrap: break-word; word-break: break-all; text-decoration: none; color: {{ primaryColor }};">{{ verification_link }}</a></p>
+
+{% endblock %}

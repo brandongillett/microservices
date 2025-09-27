@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: users
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: api.${DOMAIN}
+      http:
+        paths:
+          - path: /users
+            pathType: Prefix
+            backend:
+              service:
+                name: users
+                port:
+                  number: 8000

@@ -1,8 +1,12 @@
-from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
-from faststream.rabbit.fastapi import RabbitRouter
+from faststream.nats.fastapi import NatsRouter
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.users_lib.api.events import (
+    UPDATE_PASSWORD_ROUTE,
+    UPDATE_ROLE_ROUTE,
+    UPDATE_USERNAME_ROUTE,
+)
 from libs.users_lib.crud import get_user, update_user_role, update_user_username
 from libs.users_lib.models import Users
 from libs.users_lib.schemas import (
@@ -17,15 +21,15 @@ from libs.utils_lib.api.events import (
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.models import EventInbox, EventOutbox
+from src.core.config import settings
 from src.models import RefreshTokens
 
-rabbit_router = RabbitRouter()
+nats_router = NatsRouter()
 
 
 # Exchanges
-@rabbit_router.subscriber(
-    RabbitQueue(name="cleanup_database_auth"),
-    RabbitExchange("cleanup_database", type=ExchangeType.FANOUT),
+@nats_router.subscriber(
+    subject="cleanup_database", queue=f"cleanup_database_{settings.SERVICE_NAME}"
 )
 async def cleanup_database_event(session: async_session_dep) -> None:
     """
@@ -34,10 +38,6 @@ async def cleanup_database_event(session: async_session_dep) -> None:
     Args:
         session: The database session.
     """
-    if utils_lib_settings.ENVIRONMENT == "production":
-        logger.error("Cannot clean up database in production.")
-        return
-
     if utils_lib_settings.ENVIRONMENT in ["local", "staging"]:
         statement = delete(RefreshTokens)
         await session.execute(statement)
@@ -48,11 +48,17 @@ async def cleanup_database_event(session: async_session_dep) -> None:
         statement = delete(EventInbox)
         await session.execute(statement)
         await session.commit()
+    else:
+        logger.error("Cannot clean up database in this environment.")
+        return
 
 
 # Subscriber events
-@rabbit_router.subscriber(
-    RabbitQueue(name="auth_service_update_username", durable=True)
+@nats_router.subscriber(
+    subject=UPDATE_USERNAME_ROUTE.subject,
+    stream=UPDATE_USERNAME_ROUTE.stream,
+    pull_sub=UPDATE_USERNAME_ROUTE.pull_sub,
+    durable=UPDATE_USERNAME_ROUTE.durable,
 )
 async def update_username_event(
     session: async_session_dep, data: UpdateUserUsernameEvent
@@ -84,14 +90,17 @@ async def update_username_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="auth_service_update_username",
+        event_type=UPDATE_USERNAME_ROUTE.subject,
         process_fn=process_update_username,
         data=data,
     )
 
 
-@rabbit_router.subscriber(
-    RabbitQueue(name="auth_service_update_password", durable=True)
+@nats_router.subscriber(
+    subject=UPDATE_PASSWORD_ROUTE.subject,
+    stream=UPDATE_PASSWORD_ROUTE.stream,
+    pull_sub=UPDATE_PASSWORD_ROUTE.pull_sub,
+    durable=UPDATE_PASSWORD_ROUTE.durable,
 )
 async def update_password_event(
     session: async_session_dep, data: UpdateUserPasswordEvent
@@ -130,13 +139,18 @@ async def update_password_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="auth_service_update_password",
+        event_type=UPDATE_PASSWORD_ROUTE.subject,
         process_fn=process_update_password,
         data=data,
     )
 
 
-@rabbit_router.subscriber(RabbitQueue(name="auth_service_update_role", durable=True))
+@nats_router.subscriber(
+    subject=UPDATE_ROLE_ROUTE.subject,
+    stream=UPDATE_ROLE_ROUTE.stream,
+    pull_sub=UPDATE_ROLE_ROUTE.pull_sub,
+    durable=UPDATE_ROLE_ROUTE.durable,
+)
 async def update_role_event(
     session: async_session_dep, data: UpdateUserRoleEvent
 ) -> None:
@@ -166,7 +180,7 @@ async def update_role_event(
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="auth_service_update_role",
+        event_type=UPDATE_ROLE_ROUTE.subject,
         process_fn=process_user_role,
         data=data,
     )

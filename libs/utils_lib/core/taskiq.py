@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from croniter import croniter
+from prometheus_client import start_http_server
 from taskiq import ScheduleSource
 from taskiq.exceptions import ScheduledTaskCancelledError
 from taskiq.scheduler.scheduled_task import ScheduledTask
@@ -18,18 +19,11 @@ logger = logging.getLogger(__name__)
 
 class MyScheduleSource(ScheduleSource):
     """
-    Source of schedules for redis.
+    Custom schedule source for managing scheduled tasks.
 
-    This class allows you to store schedules in redis.
-    Also it supports dynamic schedules.
-
-    :param url: url to redis.
-    :param prefix: prefix for redis schedule keys.
-    :param buffer_size: buffer size for redis scan.
-        This is how many keys will be fetched at once.
-    :param max_connection_pool_size: maximum number of connections in pool.
-    :param serializer: serializer for data.
-    :param connection_kwargs: additional arguments for redis BlockingConnectionPool.
+    Args:
+        session_manager (DatabaseSessionManager): The database session manager.
+        redis_client (RedisClient): The Redis client for distributed locking.
     """
 
     def __init__(
@@ -39,11 +33,16 @@ class MyScheduleSource(ScheduleSource):
     ) -> None:
         self.session_manager = session_manager
         self.redis_client = redis_client
+        self.prometheus_server = None
+        self.prometheus_thread = None
 
     async def startup(self) -> None:
         """
         Initialize the schedule source.
         """
+        # Start Prometheus metrics server on port 9000
+        self.prometheus_server, self.prometheus_thread = start_http_server(9000)
+        # Initialize database and Redis connections
         await self.session_manager.init_db()
         await self.redis_client.connect()
 
@@ -51,7 +50,11 @@ class MyScheduleSource(ScheduleSource):
         """
         Shutdown the schedule source.
         """
-        await self.session_manager.shutdown()
+        # Shutdown Prometheus metrics server
+        self.prometheus_server.shutdown()
+        self.prometheus_thread.join()
+        # Close database and Redis connections
+        await self.session_manager.close()
         await self.redis_client.close()
 
     async def delete_schedule(self, schedule_id: str) -> None:
@@ -86,11 +89,13 @@ class MyScheduleSource(ScheduleSource):
 
             redis = await self.redis_client.get_client()
 
-            lock_key = f"lock:{job_name}"
+            lock_key = f"lock:add_schedule:{schedule.schedule_id}"
             lock = await redis.set(lock_key, "lock", nx=True, ex=30)
 
             if not lock:
-                logger.warning(f"Failed to acquire lock for job {job_name}. Skipping.")
+                logger.info(
+                    f"Job {job_name} is already being scheduled by another instance. Skipping..."
+                )
                 return
 
             # Add the job name to the schedule kwargs
@@ -152,7 +157,7 @@ class MyScheduleSource(ScheduleSource):
         Returns:
             list[ScheduledTask]: List of schedules.
         """
-        async with self.session_manager.get_session() as session:
+        async with self.session_manager.get_session(read_only=True) as session:
             jobs = await get_jobs(session=session, get_enabled=True)
 
         schedules = []
@@ -179,9 +184,12 @@ class MyScheduleSource(ScheduleSource):
         """
         redis = await self.redis_client.get_client()
         lock = await redis.set(
-            f"schedule_lock:{task.schedule_id}", "lock", nx=True, ex=30
+            f"lock:schedule:{task.schedule_id}", "lock", nx=True, ex=30
         )
         if not lock:
+            logger.info(
+                f"Task {task.schedule_id} is already being handled by another instance. Skipping."
+            )
             raise ScheduledTaskCancelledError()
 
     async def post_send(self, task: ScheduledTask) -> None:
@@ -203,7 +211,9 @@ class MyScheduleSource(ScheduleSource):
                 await session.refresh(job)
 
 
-result_backend = RedisAsyncResultBackend(utils_lib_settings.REDIS_URL)
+result_backend = RedisAsyncResultBackend(
+    utils_lib_settings.REDIS_URL, result_ex_time=900
+)
 
 schedule_source = MyScheduleSource(
     session_manager=session_manager, redis_client=redis_client

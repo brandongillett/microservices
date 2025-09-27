@@ -1,8 +1,11 @@
 import importlib
+import time
 from collections.abc import Callable
 from datetime import datetime
-from typing import cast
+from typing import ClassVar, cast
 
+from prometheus_client import Counter, Histogram
+from pydantic_settings import BaseSettings
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.utils_lib.api.events import handle_publish_event
@@ -15,6 +18,32 @@ from libs.utils_lib.crud import (
     get_persistent_missed_jobs,
 )
 from libs.utils_lib.models import Jobs, JobStatus
+
+
+class metrics(BaseSettings):
+    JOB_RUNS_TOTAL: ClassVar[Counter] = Counter(
+        "taskiq_job_runs_total",
+        "Total number of job executions.",
+        ["job_name", "task_name", "status"],
+    )
+    JOB_DURATION_SECONDS: ClassVar[Histogram] = Histogram(
+        "taskiq_job_duration_seconds",
+        "Histogram of job execution durations.",
+        ["job_name", "task_name"],
+    )
+    PERSISTENT_JOBS_RERUN_TOTAL: ClassVar[Counter] = Counter(
+        "taskiq_persistent_jobs_rerun_total",
+        "Total number of persistent jobs re-queued for running.",
+        ["job_name", "reason"],
+    )
+    OUTBOX_EVENTS_RESENT_TOTAL: ClassVar[Counter] = Counter(
+        "taskiq_outbox_events_resent_total",
+        "Total number of outbox events re-sent.",
+        ["reason"],
+    )
+
+
+metrics = metrics()
 
 
 # Job Scheduler Functionality
@@ -96,14 +125,27 @@ async def handle_run_task(
     job = None
     if job_name:
         job = await get_job_by_name(session, job_name)
+
+    start_time = time.perf_counter()
+    status = "failure"
+
     try:
         await task_function(*args, **kwargs)
         if job:
             await update_job_status(session, job, JobStatus.completed)
+        status = "success"
     except Exception as e:
         logger.error(f"Error running {task_name}: {e}")
         if job:
             await update_job_status(session, job, JobStatus.failed, str(e))
+    finally:
+        duration = time.perf_counter() - start_time
+        metrics.JOB_DURATION_SECONDS.labels(
+            job_name=job_name, task_name=task_name
+        ).observe(duration)
+        metrics.JOB_RUNS_TOTAL.labels(
+            job_name=job_name, task_name=task_name, status=status
+        ).inc()
 
 
 async def rerun_persistent_jobs(session: AsyncSession) -> None:
@@ -136,7 +178,15 @@ async def rerun_persistent_jobs(session: AsyncSession) -> None:
 
     # Combine and deduplicate jobs by job.id
     jobs_by_id = {}
-    for job in missed_jobs + failed_jobs:
+    for job in missed_jobs:
+        metrics.PERSISTENT_JOBS_RERUN_TOTAL.labels(
+            job_name=job.job_name, reason="missed"
+        ).inc()
+        jobs_by_id[job.id] = job
+    for job in failed_jobs:
+        metrics.PERSISTENT_JOBS_RERUN_TOTAL.labels(
+            job_name=job.job_name, reason="failed"
+        ).inc()
         jobs_by_id[job.id] = job
 
     for job in jobs_by_id.values():
@@ -163,6 +213,7 @@ async def resend_outbox_events(session: AsyncSession) -> None:
         return
 
     for event in failed_events:
+        metrics.OUTBOX_EVENTS_RESENT_TOTAL.labels(reason="failed").inc()
         await handle_publish_event(
             session=session, event=event, event_schema=event.data
         )
@@ -178,6 +229,7 @@ async def resend_outbox_events(session: AsyncSession) -> None:
         return
 
     for event in pending_events:
+        metrics.OUTBOX_EVENTS_RESENT_TOTAL.labels(reason="pending").inc()
         await handle_publish_event(
             session=session, event=event, event_schema=event.data
         )

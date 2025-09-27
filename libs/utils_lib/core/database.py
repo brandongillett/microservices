@@ -3,7 +3,6 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,8 +17,8 @@ class DatabaseSessionManager:
     def __init__(
         self,
         database_url: str,
-        pool_size: int = 150,
-        max_overflow: int = 100,
+        pool_size: int = 10,
+        max_overflow: int = 5,
         pool_timeout: int = 30,
     ):
         self.database_url = database_url
@@ -28,45 +27,41 @@ class DatabaseSessionManager:
         self.pool_timeout = pool_timeout
         self.engine: AsyncEngine | None = None
         self.session_maker: async_sessionmaker[AsyncSession] | None = None
+        self.read_engine: AsyncEngine | None = None
+        self.read_session_maker: async_sessionmaker[AsyncSession] | None = None
 
     async def create_database(self) -> None:
-        database_url_without_db = f"mysql+aiomysql://{utils_lib_settings.MYSQL_USER}:{utils_lib_settings.MYSQL_PASSWORD}@{utils_lib_settings.MYSQL_SERVER}:{utils_lib_settings.MYSQL_PORT}"
-
-        # Create the engine for MySQL connection (no database specified here)
-        temp_engine = create_async_engine(
-            database_url_without_db,
-            echo=(utils_lib_settings.ENVIRONMENT == "local"),
+        """
+        Creates the database if it does not exist.
+        """
+        # Connect to the default 'postgres' database to create the target database
+        db_url = (
+            f"{utils_lib_settings.POSTGRES_CONNECTION_SCHEME}+asyncpg://{utils_lib_settings.POSTGRES_USER}:{utils_lib_settings.POSTGRES_PASSWORD}"
+            f"@{utils_lib_settings.POSTGRES_SERVER}:{utils_lib_settings.POSTGRES_PORT}/postgres"
         )
 
-        # Connect to the MySQL server and check for the existence of the database
-        async with temp_engine.connect() as connection:
-            try:
-                # Check if the database exists by querying `information_schema.schemata`
-                result = await connection.execute(
-                    text(
-                        "SELECT SCHEMA_NAME FROM information_schema.schemata WHERE SCHEMA_NAME = :db_name"
-                    ),
-                    {"db_name": utils_lib_settings.MYSQL_DATABASE},
+        engine = create_async_engine(db_url, isolation_level="AUTOCOMMIT")
+
+        async with engine.connect() as connection:
+            check_db_sql = text("SELECT 1 FROM pg_database WHERE datname = :db_name")
+            result = await connection.execute(
+                check_db_sql, {"db_name": utils_lib_settings.POSTGRES_DB}
+            )
+            exists = result.scalar() is not None
+            if exists:
+                logger.info(
+                    f"Database '{utils_lib_settings.POSTGRES_DB}' already exists."
+                )
+            else:
+                create_db_sql = text(
+                    f'CREATE DATABASE "{utils_lib_settings.POSTGRES_DB}"'
+                )
+                await connection.execute(create_db_sql)
+                logger.info(
+                    f"Database '{utils_lib_settings.POSTGRES_DB}' created successfully."
                 )
 
-                if not result.fetchone():
-                    # Database does not exist, create it
-                    logger.info(
-                        f"Database '{utils_lib_settings.MYSQL_DATABASE}' does not exist. Creating it..."
-                    )
-                    await connection.execute(
-                        text(f"CREATE DATABASE `{utils_lib_settings.MYSQL_DATABASE}`")
-                    )
-                    await connection.commit()
-                    logger.info(
-                        f"Database '{utils_lib_settings.MYSQL_DATABASE}' created successfully."
-                    )
-            except OperationalError as e:
-                logger.error(f"Error checking database existence: {e}")
-                raise e
-
-        # Close the connection
-        await temp_engine.dispose()
+        await engine.dispose()
 
     async def init_db(self) -> None:
         """
@@ -95,13 +90,46 @@ class DatabaseSessionManager:
 
         logger.info("Database initialized successfully.")
 
-    @asynccontextmanager
-    async def get_session(self) -> AsyncGenerator[AsyncSession, None]:
-        if not self.session_maker:
-            raise RuntimeError("Session maker is not initialized")
+        if utils_lib_settings.READ_DATABASE_URL:
+            self.read_engine = create_async_engine(
+                str(utils_lib_settings.READ_DATABASE_URL),
+                pool_pre_ping=True,
+                echo=(utils_lib_settings.ENVIRONMENT == "local"),
+                pool_size=self.pool_size,
+                max_overflow=self.max_overflow,
+                pool_timeout=self.pool_timeout,
+            )
 
-        async with self.session_maker() as session:
-            yield session
+            self.read_session_maker = async_sessionmaker(
+                bind=self.read_engine,
+                expire_on_commit=False,
+                autocommit=False,
+                autoflush=False,
+                class_=AsyncSession,
+            )
+
+            logger.info("Read database detected and initialized successfully.")
+
+    @asynccontextmanager
+    async def get_session(
+        self, read_only: bool = False
+    ) -> AsyncGenerator[AsyncSession, None]:
+        """
+        Gets the database session.
+
+        Args:
+            read_only (bool): Whether to use the read-only session (if configured).
+        Yields:
+            AsyncSession: The database session.
+        """
+        if read_only and self.read_session_maker:
+            async with self.read_session_maker() as session:
+                yield session
+        elif self.session_maker:
+            async with self.session_maker() as session:
+                yield session
+        else:
+            raise Exception("Session maker not initialized")
 
     async def close(self) -> None:
         """
@@ -112,4 +140,6 @@ class DatabaseSessionManager:
             logger.info("Database connection closed.")
 
 
-session_manager = DatabaseSessionManager(database_url=utils_lib_settings.DATABASE_URL)
+session_manager = DatabaseSessionManager(
+    database_url=str(utils_lib_settings.DATABASE_URL)
+)

@@ -1,27 +1,35 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
+import anyio
 from fastapi import FastAPI
+from prometheus_client import start_http_server
 from pydantic_settings import BaseSettings
-from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
 from libs.utils_lib.api import events as utils_lib_events
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.core.database import session_manager
-from libs.utils_lib.core.rabbitmq import rabbitmq
+from libs.utils_lib.core.faststream import nats
+from libs.utils_lib.core.limiter import Limiter
+from libs.utils_lib.core.prometheus import PrometheusMiddleware
 from libs.utils_lib.core.redis import redis_client
-from libs.utils_lib.core.security import rate_limit_exceeded_handler, rate_limiter
+from libs.utils_lib.core.security import (
+    security_settings as utils_lib_security_settings,
+)
+from libs.utils_lib.main import generate_openapi
 from libs.utils_lib.tasks import schedule_jobs
 from src.api import events
 from src.api.v1.main import api_router as v1_router
 from src.core.config import settings
-from src.crud import create_root_user
 from src.tasks import tasks_settings
+from src.utils import init_root_user
 
 
 class app_settings(BaseSettings):
+    THREAD_POOL_SIZE: int = 40
     TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [{settings.SERVICE_NAME}]"
+    ROOT_PATH: str = f"/{settings.SERVICE_NAME}"
     DESCRIPTION: str = """
     A REST API service for user authentication.
 
@@ -43,31 +51,34 @@ app_settings = app_settings()  # type: ignore
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
     _ = app  # Unused variable
-    # Initialize database, Redis, and RabbitMQ connections on startup
+    # Generate OpenAPI documentation
+    generate_openapi(app)
+    # Set thread pool size
+    thread_pool_limiter = anyio.to_thread.current_default_thread_limiter()
+    thread_pool_limiter.total_tokens = app_settings.THREAD_POOL_SIZE
+    # Start Prometheus metrics server on port 9000 (separate from FastAPI app)
+    prometheus_server, prometheus_thread = start_http_server(9000)
+    # Initialize database, Redis, NATS, and Rate Limiter connections on startup
     await session_manager.init_db()
     await redis_client.connect()
-    await rabbitmq.start()
+    await nats.start()
+    Limiter.init(
+        redis_client=redis_client,
+        enable_limiter=utils_lib_security_settings.ENABLE_RATE_LIMIT,
+    )
     # Schedule jobs
     await schedule_jobs(jobs=tasks_settings.JOBS)
+    # Create root user if password is set
+    await init_root_user()
 
-    # Create root user
-    if (
-        utils_lib_settings.ROOT_USER_PASSWORD
-        and utils_lib_settings.ROOT_USER_PASSWORD != "none"
-    ):
-        async with session_manager.get_session() as session:
-            root_user = await create_root_user(
-                session, utils_lib_settings.ROOT_USER_PASSWORD
-            )
-        await rabbitmq.broker.publish(root_user, queue="users_service_create_root_user")
-        await rabbitmq.broker.publish(
-            root_user, queue="emails_service_create_root_user"
-        )
     yield
-    # Close database, Redis, and RabbitMQ connections on shutdown
+    # Shutdown Prometheus metrics server
+    prometheus_server.shutdown()
+    prometheus_thread.join()
+    # Close database, Redis, and NATS connections on shutdown
     await session_manager.close()
     await redis_client.close()
-    await rabbitmq.close()
+    await nats.close()
 
 
 app = FastAPI(
@@ -77,27 +88,28 @@ app = FastAPI(
     docs_url=utils_lib_settings.DOCS_URL,
     lifespan=lifespan,
     swagger_ui_parameters=app_settings.swagger_ui_parameters,
+    root_path=app_settings.ROOT_PATH,
 )
 
-# Include rabbitmq router
-rabbitmq.router.include_router(events.rabbit_router)
-rabbitmq.router.include_router(utils_lib_events.rabbit_router)  # acknowledgements
-app.include_router(rabbitmq.router)
+# Add Prometheus middleware
+app.add_middleware(
+    PrometheusMiddleware,
+    root_path=app_settings.ROOT_PATH,
+)
+
+# Include nats router
+nats.router.include_router(events.nats_router)
+nats.router.include_router(utils_lib_events.nats_router)  # acknowledgements
+app.include_router(nats.router)
 
 # Set all CORS enabled origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=utils_lib_settings.CORS_ORIGINS,
-    allow_origin_regex=rf"https://.*\.{utils_lib_settings.DOMAIN}",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Rate limiter settings
-app.state.limiter = rate_limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
-
 
 # Mount versions to the main app
 app_v1 = FastAPI(

@@ -1,29 +1,44 @@
 {
-  "name": "frontend",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.21.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "@vitejs/plugin-react": "^4.3.4",
-    "eslint": "^9.21.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^15.15.0",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
-  }
+	"name": "frontend",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "npm run build:tokens && npm run build:clients && vite",
+		"build": "npm run build:tokens && npm run build:clients && tsc -p tsconfig.build.json && vite build",
+		"build:tokens": "node build-tokens.js && prettier --write \"./src/tokens/**/*\"",
+		"build:clients": "node build-clients.js && prettier --write \"./src/client/**/*\"",
+		"lint": "biome check --apply-unsafe --no-errors-on-unmatched --files-ignore-unknown=true ./",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@chakra-ui/react": "^3.8.0",
+		"@emotion/react": "^11.14.0",
+		"@tanstack/react-query": "^5.74.4",
+		"@tanstack/react-query-devtools": "^5.28.14",
+		"@tanstack/react-router": "^1.19.1",
+		"axios": "^1.11.0",
+		"form-data": "^4.0.4",
+		"next-themes": "^0.4.4",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"react-error-boundary": "^4.0.13",
+		"react-hook-form": "7.49.3",
+		"react-icons": "^5.4.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.6.1",
+		"@hey-api/openapi-ts": "^0.57.0",
+		"@playwright/test": "^1.45.2",
+		"@tanstack/router-devtools": "1.19.1",
+		"@tanstack/router-vite-plugin": "1.19.0",
+		"@types/node": "^20.10.5",
+		"@types/react": "^18.2.37",
+		"@types/react-dom": "^18.2.15",
+		"@vitejs/plugin-react-swc": "^3.5.0",
+		"dotenv": "^16.4.5",
+		"prettier": "^3.6.2",
+		"typescript": "^5.2.2",
+		"vite": "^7.1.4"
+	}
 }

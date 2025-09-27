@@ -22,3 +22,12 @@ class CreateUserEvent(EventMessageBase):
 
 class VerifyUserEvent(EventMessageBase):
     user_id: UUID
+
+
+class VerificationSendEvent(EventMessageBase):
+    user: Users
+
+
+class ForgotPasswordSendEvent(EventMessageBase):
+    user_id: UUID
+    token: str

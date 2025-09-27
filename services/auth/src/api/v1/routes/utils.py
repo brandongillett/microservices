@@ -1,33 +1,28 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
+from fastapi.params import Depends
 
-from libs.utils_lib.core.security import rate_limiter
+from libs.utils_lib.core.limiter import Limiter
 
 router = APIRouter()
 
 
-@router.get("/health")
-@rate_limiter.limit("15/minute")
-async def health_check(request: Request) -> bool:
+@router.get("/health", dependencies=[Depends(Limiter("30/minute"))])
+async def health_check() -> bool:
     """
     Health check endpoint.
 
     Returns:
         bool: True
     """
-    _ = request  # Unused variable (mandatory for rate limiter)
-
     return True
 
 
-@router.get("/version")
-@rate_limiter.limit("10/minute")
-async def version(request: Request) -> str:
+@router.get("/version", dependencies=[Depends(Limiter("30/minute"))])
+async def version() -> str:
     """
     Get the API version.
 
     Returns:
         str: The API version.
     """
-    _ = request  # Unused variable (mandatory for rate limiter)
-
     return "v1"

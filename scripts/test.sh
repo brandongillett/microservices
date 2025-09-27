@@ -25,16 +25,16 @@ docker compose up -d > /dev/null 2>&1
 run_tests() {
     local service_name="$1"
     echo -e "${CYAN}Running tests for $service_name...${NC}"
-    docker compose exec -t "$service_name" bash scripts/tests-start.sh "$@"
+    docker compose exec -t "$service_name" bash scripts/run-tests.sh "$@"
 }
 
 # Identify and test all services
 for service_dir in services/*/; do
-    service_name=$(basename "$service_dir")-service
-    if [ -f "$service_dir/scripts/tests-start.sh" ]; then
+    service_name=$(basename "$service_dir")
+    if [ -f "$service_dir/scripts/run-tests.sh" ]; then
         run_tests "$service_name"
     else
-        echo -e "${YELLOW}Skipping $service_name: tests-start.sh not found${NC}"
+        echo -e "${YELLOW}Skipping $service_name: run-tests.sh not found${NC}"
     fi
 done
 

@@ -1,0 +1,214 @@
+name: Build & Deploy to Production
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-check:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - name: Check for Kubernetes Config
+        id: check
+        run: |
+          if [ -z "${{ secrets.PRODUCTION_KUBE_CONFIG }}" ]; then
+            echo "No Kubernetes Config Found... Skipping deployment."
+            echo "deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+  build-deploy:
+    needs: deploy-check
+    if: needs.deploy-check.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    env:
+      # App settings
+      ENVIRONMENT: production
+      DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
+      PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
+      FRONTEND_HOST: https://${{ secrets.PRODUCTION_DOMAIN }}
+      VITE_API_URL: https://api.${{ secrets.PRODUCTION_DOMAIN }}
+      # Build settings
+      STACK_NAME: ${{ secrets.PRODUCTION_STACK_NAME }}
+      DOCKER_PLATFORMS: linux/arm64 # ex. linux/amd64,linux/arm64
+      BUILD_TAG: ${{ github.sha }}
+      # Kubernetes settings
+      NAMESPACE: microservices-prd
+      DATABASE_NAMESPACE: microservices-db-prd
+      # Replica settings
+      # Frontend
+      FRONTEND_REPLICAS: 2
+      # Services
+      AUTH_REPLICAS: 2
+      USERS_REPLICAS: 2
+      EMAILS_REPLICAS: 2
+      # Schedulers
+      AUTH_SCHEDULER_REPLICAS: 2
+      USERS_SCHEDULER_REPLICAS: 2
+      EMAILS_SCHEDULER_REPLICAS: 2
+      # Workers
+      AUTH_WORKER_REPLICAS: 2
+      USERS_WORKER_REPLICAS: 2
+      EMAILS_WORKER_REPLICAS: 2
+    steps:
+      # 1) Checkout & detect changed targets
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Decide build & deploy targets
+        id: detect
+        run: |
+          mapfile -t files < <(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+          services=(); build_frontend=false
+
+          for f in "${files[@]}"; do
+            case "$f" in
+              # any change in frontend code or its k8s manifests
+              frontend/*|k8s/frontend/*)
+                build_frontend=true
+                ;;
+              # any change in libs (rebuild all services)
+              libs/*)
+                for dir in services/*/; do
+                  [[ -f "$dir/Dockerfile" ]] && services+=("$(basename "$dir")")
+                done
+                break
+                ;;
+              # any change in one of the services
+              services/*)
+                svc=${f#services/}
+                svc=${svc%%/*}
+                services+=( "$svc" )
+                ;;
+              # any change in one of the services' k8s manifests
+              k8s/services/*)
+                svc=${f#k8s/services/}
+                svc=${svc%%/*}
+                services+=( "$svc" )
+                ;;
+            esac
+          done
+
+          # dedupe
+          services=( $(printf "%s\n" "${services[@]}" | sort -u) )
+
+          echo "→ Services to build: ${services[*]:-(none)}"
+          echo "→ Build frontend: $build_frontend"
+
+          echo "services=$(IFS=,; echo "${services[*]}")" >> $GITHUB_OUTPUT
+          echo "build_frontend=$build_frontend"       >> $GITHUB_OUTPUT
+
+      # 2) Install tools & authenticate
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: cloud # Cloud Build is optional, but best workaround for arm builds
+          endpoint: "${{ secrets.DOCKER_USERNAME }}/cloud"
+          install: true
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.13.0
+
+      # 3) Build & push changed services
+      - name: Build & push services
+        if: steps.detect.outputs.services != ''
+        run: |
+          IFS=, read -ra SVCS <<< "${{ steps.detect.outputs.services }}"
+          for svc in "${SVCS[@]}"; do
+            image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
+            echo "→ Building $svc with image: $image"
+            cp -r libs services/$svc/
+            docker buildx build --platform $DOCKER_PLATFORMS -t "$image" --push services/$svc/
+            rm -rf services/$svc/libs
+          done
+
+      # 4) Build & push frontend
+      - name: Build & push frontend
+        if: steps.detect.outputs.build_frontend == 'true'
+        run: |
+          image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
+          echo "→ Building frontend with image: $image"
+          docker buildx build \
+            --platform $DOCKER_PLATFORMS \
+            --build-arg VITE_API_URL=${VITE_API_URL} \
+            -t "$image" \
+            --push frontend
+
+      # 5) Configure kubectl with config
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.PRODUCTION_KUBE_CONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Set up kubectl secrets
+        run: |
+          kubectl create secret docker-registry docker-creds \
+            --docker-server="https://index.docker.io/v1/" \
+            --docker-username="${{ secrets.DOCKER_USERNAME }}" \
+            --docker-password="${{ secrets.DOCKER_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+          kubectl create secret generic postgres-secrets \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.PRODUCTION_DB_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+          kubectl create secret generic nats-secrets \
+            --from-literal=NATS_URL="${{ secrets.PRODUCTION_NATS_URL }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+          kubectl create secret generic redis-secrets \
+            --from-literal=AUTH_REDIS_URL="${{ secrets.PRODUCTION_AUTH_REDIS_URL }}" \
+            --from-literal=USERS_REDIS_URL="${{ secrets.PRODUCTION_USERS_REDIS_URL }}" \
+            --from-literal=EMAILS_REDIS_URL="${{ secrets.PRODUCTION_EMAILS_REDIS_URL }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+          kubectl create secret generic service-secrets \
+            --from-literal=ROOT_USER_PASSWORD="${{ secrets.PRODUCTION_ROOT_USER_PASSWORD }}" \
+            --from-literal=SECRET_KEY="${{ secrets.PRODUCTION_SECRET_KEY }}" \
+            --from-literal=SMTP_PASSWORD="${{ secrets.PRODUCTION_SMTP_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
+
+      # 6) Deploy changed services
+      - name: Deploy services to Kubernetes
+        if: steps.detect.outputs.services != ''
+        run: |
+          IFS=, read -ra SVCS <<< "${{ steps.detect.outputs.services }}"
+          for svc in "${SVCS[@]}"; do
+            export IMAGE=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
+            echo "→ Deploying $svc with image: $IMAGE"
+            for manifest in k8s/services/$svc/*; do
+              envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
+            done
+          done
+
+      # 7) Deploy frontend
+      - name: Deploy frontend to Kubernetes
+        if: steps.detect.outputs.build_frontend == 'true'
+        run: |
+          export IMAGE=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
+          echo "→ Deploying frontend with image: $IMAGE"
+          for manifest in k8s/frontend/*; do
+            envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
+          done

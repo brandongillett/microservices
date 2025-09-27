@@ -1,5 +1,0 @@
----
-image:
-  repository: traefik
-  tag: v3.4.0
-  pullPolicy: IfNotPresent

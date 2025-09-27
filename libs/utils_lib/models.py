@@ -60,11 +60,7 @@ class EventOutbox(EventBase, table=True):
 
 
 class Jobs(JobsBase, table=True):
-    id: str = Field(
-        primary_key=True,
-        default_factory=lambda: uuid4().hex,
-        index=True,
-    )
+    id: str = Field(primary_key=True, default_factory=lambda: uuid4().hex)
     task_name: str = Field(max_length=255)
     args: dict = Field(default={}, sa_column=Column(JSON))
     kwargs: dict = Field(default={}, sa_column=Column(JSON))

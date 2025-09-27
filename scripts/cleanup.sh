@@ -11,6 +11,7 @@ NC='\033[0m' # No color (reset)
 
 # Cleanup targets
 CLEANUP_TARGETS=(
+    ".ruff_cache"
     "__pycache__"
     "app.egg-info"
     ".pyc"

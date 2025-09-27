@@ -1,0 +1,23 @@
+{
+	"brand": {
+		"primary": { "value": "#EF476F" },
+		"primaryDark": { "value": "#C7113C" },
+		"primaryLight": { "value": "#F69CB1" }
+	},
+	"background": {
+		"default": { "value": "#2F2B3A" },
+		"muted": { "value": "#615D6C" },
+		"elevated": { "value": "#4A4559" }
+	},
+	"foreground": {
+		"default": { "value": "#F2F2F5" },
+		"muted": { "value": "#BFBFCC" },
+		"onAccent": { "value": "#2F2B3A" }
+	},
+	"border": {
+		"default": { "value": "#615D6C" }
+	},
+	"status": {
+		"info": { "value": "#3B82F6" }
+	}
+}

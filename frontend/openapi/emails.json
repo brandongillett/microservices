@@ -1,0 +1,56 @@
+{
+  "info": {
+    "description": "\n    A REST API service for email notifications.\n\n    This REST API:\n    - Sends email notifications to users.\n    ",
+    "title": "Microservices [emails]",
+    "version": "latest"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/utils/health": {
+      "get": {
+        "description": "Health check endpoint.\n\nReturns:\n    bool: True",
+        "operationId": "health_check_utils_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Health Check Utils Health Get",
+                  "type": "boolean"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "utils"
+        ]
+      }
+    },
+    "/utils/version": {
+      "get": {
+        "description": "Get the API version.\n\nReturns:\n    str: The API version.",
+        "operationId": "version_utils_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Version Utils Version Get",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Version",
+        "tags": [
+          "utils"
+        ]
+      }
+    }
+  }
+}

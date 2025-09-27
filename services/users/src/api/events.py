@@ -1,12 +1,18 @@
-from faststream.rabbit import ExchangeType, RabbitExchange, RabbitQueue
-from faststream.rabbit.fastapi import RabbitRouter
+from faststream.nats.fastapi import NatsRouter
 from sqlmodel import delete, not_
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from libs.auth_lib.api.events import (
+    CREATE_ROOT_USER_ROUTE,
+    CREATE_USER_ROUTE,
+    VERIFY_USER_ROUTE,
+)
 from libs.auth_lib.crud import verify_user_email
 from libs.auth_lib.schemas import CreateUserEvent, VerifyUserEvent
-from libs.users_lib.crud import get_user_by_username
+from libs.users_lib.api.events import UPDATE_PASSWORD_ROUTE
+from libs.users_lib.crud import get_user, get_user_by_username
 from libs.users_lib.models import Users
+from libs.users_lib.schemas import UpdateUserPasswordEvent
 from libs.utils_lib.api.deps import async_session_dep
 from libs.utils_lib.api.events import (
     handle_subscriber_event,
@@ -14,15 +20,14 @@ from libs.utils_lib.api.events import (
 )
 from libs.utils_lib.core.config import settings as utils_lib_settings
 from libs.utils_lib.models import EventInbox, EventOutbox
+from src.core.config import settings
 
-rabbit_router = RabbitRouter()
+nats_router = NatsRouter()
 
 
-#
 # Exchanges
-@rabbit_router.subscriber(
-    RabbitQueue(name="cleanup_database_users"),
-    RabbitExchange("cleanup_database", type=ExchangeType.FANOUT),
+@nats_router.subscriber(
+    subject="cleanup_database", queue=f"cleanup_database_{settings.SERVICE_NAME}"
 )
 async def cleanup_database_event(session: async_session_dep) -> None:
     """
@@ -31,9 +36,6 @@ async def cleanup_database_event(session: async_session_dep) -> None:
     Args:
         session: The database session.
     """
-    if utils_lib_settings.ENVIRONMENT == "production":
-        logger.error("Cannot clean up database in production.")
-        return
     if utils_lib_settings.ENVIRONMENT in ["local", "staging"]:
         statement = delete(Users).where(not_(Users.username == "root"))
         await session.execute(statement)
@@ -42,10 +44,18 @@ async def cleanup_database_event(session: async_session_dep) -> None:
         statement = delete(EventInbox)
         await session.execute(statement)
         await session.commit()
+    else:
+        logger.error("Cannot clean up database in this environment.")
+        return
 
 
 # Subscriber events
-@rabbit_router.subscriber("users_service_create_root_user")
+@nats_router.subscriber(
+    subject=CREATE_ROOT_USER_ROUTE.subject,
+    stream=CREATE_ROOT_USER_ROUTE.stream,
+    pull_sub=CREATE_ROOT_USER_ROUTE.pull_sub,
+    durable=CREATE_ROOT_USER_ROUTE.durable,
+)
 async def create_root_user_event(session: async_session_dep, user: Users) -> None:
     """
     Subscribes to an event to create a user.
@@ -64,7 +74,12 @@ async def create_root_user_event(session: async_session_dep, user: Users) -> Non
         logger.info("Root user created.")
 
 
-@rabbit_router.subscriber(RabbitQueue(name="users_service_create_user", durable=True))
+@nats_router.subscriber(
+    subject=CREATE_USER_ROUTE.subject,
+    stream=CREATE_USER_ROUTE.stream,
+    pull_sub=CREATE_USER_ROUTE.pull_sub,
+    durable=CREATE_USER_ROUTE.durable,
+)
 async def create_user_event(session: async_session_dep, data: CreateUserEvent) -> None:
     """
     Subscribes to an event to create a user.
@@ -93,13 +108,67 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="users_service_create_user",
+        event_type=CREATE_USER_ROUTE.subject,
         process_fn=process_create_user,
         data=data,
     )
 
 
-@rabbit_router.subscriber(RabbitQueue(name="users_service_verify_user", durable=True))
+@nats_router.subscriber(
+    subject=UPDATE_PASSWORD_ROUTE.subject,
+    stream=UPDATE_PASSWORD_ROUTE.stream,
+    pull_sub=UPDATE_PASSWORD_ROUTE.pull_sub,
+    durable=UPDATE_PASSWORD_ROUTE.durable,
+)
+async def update_password_event(
+    session: async_session_dep, data: UpdateUserPasswordEvent
+) -> None:
+    """
+    Subscribes to an event to update a user's password.
+
+    Args:
+        session: The database session.
+        data: The event containing the user details to be updated
+    """
+
+    async def process_update_password(
+        session: AsyncSession, data: UpdateUserPasswordEvent
+    ) -> None:
+        """
+        Processes the logic for updating a user's password.
+
+        Args:
+            session: The database session.
+            data: The event containing the user details to be updated.
+
+        Returns:
+            None
+        """
+        user = await get_user(session, data.user_id)
+
+        if not user:
+            raise ValueError(f"User {data.user_id} not found.")
+
+        user.password = data.new_password
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    await handle_subscriber_event(
+        session=session,
+        event_id=data.event_id,
+        event_type=UPDATE_PASSWORD_ROUTE.subject,
+        process_fn=process_update_password,
+        data=data,
+    )
+
+
+@nats_router.subscriber(
+    subject=VERIFY_USER_ROUTE.subject,
+    stream=VERIFY_USER_ROUTE.stream,
+    pull_sub=VERIFY_USER_ROUTE.pull_sub,
+    durable=VERIFY_USER_ROUTE.durable,
+)
 async def verify_user_event(session: async_session_dep, data: VerifyUserEvent) -> None:
     """
     Subscribes to an event to to verify a user's email.
@@ -127,7 +196,7 @@ async def verify_user_event(session: async_session_dep, data: VerifyUserEvent) -
     await handle_subscriber_event(
         session=session,
         event_id=data.event_id,
-        event_type="users_service_verify_user",
+        event_type=VERIFY_USER_ROUTE.subject,
         process_fn=process_verify_user_event,
         data=data,
     )

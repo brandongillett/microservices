@@ -25,6 +25,7 @@ COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 COPY ./src /app/src
 
+# Copy libs if it exists
 COPY ./libs* /app/libs
 
 RUN --mount=type=cache,target=/root/.cache/uv \

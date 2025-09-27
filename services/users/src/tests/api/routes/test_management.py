@@ -20,11 +20,11 @@ async def test_get_user_data(
     _, new_user = await create_and_login_user_helper(db, auth_client)
 
     response_email = await client.get(
-        f"/management/users?email={new_user.email}", headers=headers
+        f"/management/users?username_email={new_user.email}", headers=headers
     )
 
     response_username = await client.get(
-        f"/management/users?username={new_user.username}", headers=headers
+        f"/management/users?username_email={new_user.username}", headers=headers
     )
 
     assert response_email.status_code == 200
@@ -37,27 +37,29 @@ async def test_get_user_data_unauthorized(
 ) -> None:
     headers, _ = await create_and_login_user_helper(db, auth_client)
 
-    response = await client.get("/management/users", headers=headers)
+    _, new_user = await create_and_login_user_helper(db, auth_client)
 
-    assert response.status_code == 403
+    response_email = await client.get(
+        f"/management/users?username_email={new_user.email}", headers=headers
+    )
+
+    response_username = await client.get(
+        f"/management/users?username_email={new_user.username}", headers=headers
+    )
+
+    assert response_email.status_code == 403
+    assert response_username.status_code == 403
 
 
 @pytest.mark.anyio
 async def test_get_user_data_invalid(
-    db: AsyncSession, client: AsyncClient, auth_client: AsyncClient
+    client: AsyncClient, auth_client: AsyncClient
 ) -> None:
     headers = await login_root_user_helper(auth_client)
 
-    _, new_user = await create_and_login_user_helper(db, auth_client)
-
-    response_both = await client.get(
-        f"/management/users?email={new_user.email}&username={new_user.username}",
-        headers=headers,
-    )
     response_none = await client.get("/management/users", headers=headers)
 
-    assert response_both.status_code == 400
-    assert response_none.status_code == 400
+    assert response_none.status_code == 422
 
 
 @pytest.mark.anyio
@@ -67,10 +69,10 @@ async def test_get_user_data_not_found(
     headers = await login_root_user_helper(auth_client)
 
     response_email = await client.get(
-        "/management/users?email=test_email@test.com", headers=headers
+        "/management/users?username_email=test_email@test.com", headers=headers
     )
     response_username = await client.get(
-        "/management/users?username=test_username", headers=headers
+        "/management/users?username_email=test_username", headers=headers
     )
 
     assert response_email.status_code == 404

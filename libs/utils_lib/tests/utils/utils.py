@@ -21,7 +21,7 @@ def random_lower_string() -> str:
 
 
 def random_email() -> str:
-    return f"{random_lower_string()}@{random_lower_string()}.com"
+    return f"{random_lower_string()}@test-account.com"
 
 
 async def create_and_login_user_helper(
@@ -32,7 +32,7 @@ async def create_and_login_user_helper(
     email = random_email()
 
     create_response = await client.post(
-        "/auth/register",
+        "/register",
         json={"username": username, "email": email, "password": test_password},
     )
     new_user = Users(**create_response.json())
@@ -48,7 +48,7 @@ async def create_and_login_user_helper(
     assert verification_response.status_code == 200
 
     login_response = await client.post(
-        "/auth/login",
+        "/login",
         data={"username": username, "password": test_password},
     )
     login_json = login_response.json()
@@ -69,7 +69,7 @@ async def login_root_user_helper(auth_client: AsyncClient) -> dict[str, str]:
         str: The access token.
     """
     login_response = await auth_client.post(
-        "/auth/login",
+        "/login",
         data={"username": "root", "password": utils_lib_settings.ROOT_USER_PASSWORD},
     )
     login_json = login_response.json()

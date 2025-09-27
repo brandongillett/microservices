@@ -2,7 +2,8 @@ import re
 from uuid import UUID
 
 import jwt
-from passlib.context import CryptContext
+from argon2 import PasswordHasher, exceptions
+from fastapi.concurrency import run_in_threadpool
 from pydantic_settings import BaseSettings
 
 from libs.utils_lib.core.config import settings as utils_libs_settings
@@ -10,9 +11,6 @@ from libs.utils_lib.core.config import settings as utils_libs_settings
 
 # Security Settings
 class security_settings(BaseSettings):
-    # Roles
-    roles: list[str] = ["user", "admin", "root"]
-
     # Hashing algorithm (for tokens)
     ALGORITHM: str = "HS256"
     # Username and password constraints
@@ -23,8 +21,9 @@ class security_settings(BaseSettings):
     EMAIL_MIN_LENGTH: int = 3
     EMAIL_MAX_LENGTH: int = 255
 
-    # Email verification token expiration time
+    # Token expiration times
     EMAIL_VERIFICATION_EXPIRES_MINUTES: int = 30
+    PASSWORD_RESET_EXPIRES_MINUTES: int = 15
 
 
 security_settings = security_settings()  # type: ignore
@@ -54,10 +53,14 @@ def get_token_jti(token: str) -> UUID | None:
 
 
 # Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = PasswordHasher(
+    time_cost=3,
+    memory_cost=32768,  # 32 MB
+    parallelism=1,
+)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+async def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against a hashed password.
 
@@ -68,10 +71,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         bool: True if the passwords match, False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+
+    def verify():
+        try:
+            pwd_context.verify(hashed_password, plain_password)
+            return True
+        except exceptions.VerifyMismatchError:
+            return False
+        except exceptions.VerificationError:
+            # covers other verification errors
+            return False
+
+    return await run_in_threadpool(verify)
 
 
-def get_password_hash(password: str) -> str:
+async def get_password_hash(password: str) -> str:
     """
     Get the hash of a password.
 
@@ -81,7 +95,7 @@ def get_password_hash(password: str) -> str:
     Returns:
         str: The hashed password.
     """
-    return pwd_context.hash(password)
+    return await run_in_threadpool(pwd_context.hash, password)
 
 
 # Username and password validation
@@ -108,7 +122,7 @@ def is_email_valid(email: str) -> str | None:
     return None
 
 
-def is_username_complex(username: str) -> str | None:
+def is_username_valid(username: str) -> str | None:
     """
     Check if a username meets the required complexity.
 

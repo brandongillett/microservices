@@ -1,0 +1,13 @@
+{
+  "button": {
+    "primary": {
+      "bg": {
+        "default": "#EF476F",
+        "hover": "#F69CB1"
+      },
+      "fg": {
+        "default": "#2F2B3A"
+      }
+    }
+  }
+}

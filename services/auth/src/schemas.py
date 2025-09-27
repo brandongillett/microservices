@@ -37,3 +37,9 @@ class RefreshTokenPublic(RefreshTokenBase):
 class RefreshTokensPublic(SQLModel):
     refresh_tokens: list[RefreshTokenPublic]
     count: int
+
+
+# Password reset schemas
+class ResetPassword(SQLModel):
+    token: str
+    new_password: str

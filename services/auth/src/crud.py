@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from libs.auth_lib.core.security import get_password_hash, verify_password
 from libs.users_lib.crud import get_user_by_email, get_user_by_username
-from libs.users_lib.models import Users
+from libs.users_lib.models import UserRole, Users
 from src.api.config import api_settings
 from src.models import RefreshTokens
 from src.schemas import RefreshTokenCreate, UserCreate
@@ -40,8 +40,8 @@ async def create_root_user(
     dbObj = Users.model_validate(
         user_create,
         update={
-            "password": get_password_hash(user_create.password),
-            "role": "root",
+            "password": await get_password_hash(user_create.password),
+            "role": UserRole.root,
             "verified": True,
         },
     )
@@ -69,7 +69,7 @@ async def create_user(
         Users: The created user.
     """
     dbObj = Users.model_validate(
-        user_create, update={"password": get_password_hash(user_create.password)}
+        user_create, update={"password": await get_password_hash(user_create.password)}
     )
 
     session.add(dbObj)
@@ -102,7 +102,7 @@ async def authenticate_user(
     else:
         user = await get_user_by_username(session, username_email)
 
-    if user and verify_password(password, user.password):
+    if user and await verify_password(password, user.password):
         return user
 
     return None

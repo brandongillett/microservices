@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-env
+data:
+  # Postgres
+  POSTGRES_CONNECTION_SCHEME: postgresql
+  POSTGRES_SERVER: microservices-pg-cluster-rw-pgbouncer.${DATABASE_NAMESPACE}.svc
+  POSTGRES_READ_SERVER: microservices-pg-cluster-ro-pgbouncer.${DATABASE_NAMESPACE}.svc
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: appuser
+  POSTGRES_DB: Auth

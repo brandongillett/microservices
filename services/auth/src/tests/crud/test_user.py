@@ -26,7 +26,7 @@ async def test_create_user(db: AsyncSession) -> None:
     assert new_user
     assert new_user.email == email
     assert new_user.username == username
-    assert verify_password(test_password, new_user.password)
+    assert await verify_password(test_password, new_user.password)
     assert new_user.id
 
 

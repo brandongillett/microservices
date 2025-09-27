@@ -1,0 +1,13 @@
+{
+	"button": {
+		"primary": {
+			"bg": {
+				"default": { "value": "{color.brand.primary}" },
+				"hover": { "value": "{color.brand.primaryLight}" }
+			},
+			"fg": {
+				"default": { "value": "{color.foreground.onAccent}" }
+			}
+		}
+	}
+}

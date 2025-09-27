@@ -1,44 +1,44 @@
 from fastapi import HTTPException, Request, status
-from fastapi.responses import JSONResponse
 from itsdangerous import URLSafeTimedSerializer
 from pydantic_settings import BaseSettings
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
-from libs.utils_lib.core.config import settings
+from libs.utils_lib.core.config import settings as utils_lib_settings
 
 
 # Security Settings
 class security_settings(BaseSettings):
     # Rate limit settings
-    def get_enable_rate_imit(self) -> bool:
-        return settings.ENVIRONMENT != "local"
+    def get_enable_rate_limit(self) -> bool:
+        return utils_lib_settings.ENVIRONMENT != "local"
 
     # rate limiting disabled in local environment
-    ENABLE_RATE_LIMIT = property(get_enable_rate_imit)
+    ENABLE_RATE_LIMIT = property(get_enable_rate_limit)
 
 
 security_settings = security_settings()  # type: ignore
 
-# Rate limit settings
-rate_limiter = Limiter(key_func=get_remote_address, storage_uri=settings.REDIS_URL)
-if not security_settings.ENABLE_RATE_LIMIT:
-    rate_limiter.enabled = False
 
+# Get IP address from request headers
+def get_client_ip(request: Request) -> str:
+    """
+    Get the client's IP address from the request.
 
-async def rate_limit_exceeded_handler(request: Request, exc: Exception) -> JSONResponse:
-    _ = request  # Unused variable (mandatory for rate limiter)
-    if isinstance(exc, RateLimitExceeded):
-        return JSONResponse(
-            status_code=429,
-            content={"detail": "Rate limit exceeded (Please try again later)"},
-        )
-    # Handle other exceptions if necessary
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected error occurred"},
-    )
+    Args:
+        request (Request): The request object
+
+    Returns:
+        str: The client's IP address
+    """
+    if utils_lib_settings.CLIENT_IP_HEADER:
+        custom_ip = request.headers.get(utils_lib_settings.CLIENT_IP_HEADER)
+        if custom_ip:
+            return custom_ip.strip()
+
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+
+    return request.client.host if request.client else "0.0.0.0"
 
 
 # URL safe token generation and verification
@@ -53,7 +53,9 @@ def gen_url_token(data: dict, salt: str) -> str:
     Returns:
         str: The URL-safe token.
     """
-    serializer = URLSafeTimedSerializer(secret_key=settings.SECRET_KEY, salt=salt)
+    serializer = URLSafeTimedSerializer(
+        secret_key=utils_lib_settings.SECRET_KEY, salt=salt
+    )
 
     return serializer.dumps(data)
 
@@ -70,7 +72,9 @@ def verify_url_token(token: str, salt: str, expiration: int) -> dict:
     Returns:
         dict: The data extracted from the token. If the token is invalid or expired, an HTTPException is raised.
     """
-    serializer = URLSafeTimedSerializer(secret_key=settings.SECRET_KEY, salt=salt)
+    serializer = URLSafeTimedSerializer(
+        secret_key=utils_lib_settings.SECRET_KEY, salt=salt
+    )
 
     try:
         data = serializer.loads(token, max_age=expiration * 60)

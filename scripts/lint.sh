@@ -26,7 +26,7 @@ run_linter() {
 
 # Identify and lint all services
 for service_dir in services/*/; do
-    service_name=$(basename "$service_dir")-service
+    service_name=$(basename "$service_dir")
     if [ -f "$service_dir/scripts/lint.sh" ]; then
         run_linter "$service_name"
     else

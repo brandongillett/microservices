@@ -11,9 +11,7 @@ from libs.auth_lib.core.security import (
     security_settings as auth_lib_security_settings,
 )
 from libs.auth_lib.schemas import TokenData
-from libs.users_lib.crud import get_user
-from libs.users_lib.models import Users
-from libs.utils_lib.api.deps import async_session_dep
+from libs.users_lib.models import UserRole
 from libs.utils_lib.core.config import settings
 from src.api.config import api_settings
 
@@ -72,57 +70,7 @@ async def get_token_data(
         raise credential_exception
 
 
-async def get_user_from_token(
-    session: async_session_dep, token: str, required_type: Literal["access", "refresh"]
-) -> Users:
-    """
-    Get the user from the token.
-
-    Args:
-        session (AsyncSession): The database session.
-        token (str): The token to decode.
-
-    Returns:
-        Users: The user object.
-    """
-    token_data = await get_token_data(token=token, required_type=required_type)
-
-    user_id = token_data.user_id
-
-    user = await get_user(session=session, user_id=user_id)
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not retrieve user",
-        )
-    elif user.disabled:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user",
-        )
-
-    return user
-
-
-async def get_current_user(session: async_session_dep, token: token_dep) -> Users:
-    """
-    Get the current user from the token.
-
-    Args:
-        session (AsyncSession): The database session.
-        token (str): The token to decode.
-
-    Returns:
-        Users: The user object.
-    """
-
-    return await get_user_from_token(
-        session=session, token=token, required_type="access"
-    )
-
-
-async def get_current_user_token_data(token: token_dep) -> TokenData:
+async def get_current_token_data(token: token_dep) -> TokenData:
     """
     Get the current user ID from the token.
 
@@ -135,26 +83,40 @@ async def get_current_user_token_data(token: token_dep) -> TokenData:
     return await get_token_data(token=token, required_type="access")
 
 
-current_user = Annotated[Users, Depends(get_current_user)]
-
-# Dependency to get the token data (All services will use this dependency to retrieve the token data)
-current_user_token_data = Annotated[UUID, Depends(get_current_user_token_data)]
+# Dependency to get the token data
+current_token_data = Annotated[TokenData, Depends(get_current_token_data)]
 
 
-class RoleChecker:
-    def __init__(self, allowed_roles: list[str]) -> None:
+class TokenAuthorization:
+    def __init__(self, allowed_roles: set[str]) -> None:
         self.allowed_roles = allowed_roles
 
-    async def __call__(self, token_data: current_user_token_data) -> Any:
+    async def __call__(self, token_data: current_token_data) -> Any:
         if settings.REQUIRE_USER_VERIFICATION and not token_data.verified:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not verified",
             )
         if token_data.role in self.allowed_roles:
-            return True
+            return token_data
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions",
         )
+
+
+# Role Authorization dependencies
+GEN_AUTH_ROLES = {role.value for role in UserRole}
+MGMT_AUTH_ROLES = {UserRole.admin.value, UserRole.root.value}
+ROOT_AUTH_ROLES = {UserRole.root.value}
+
+gen_auth_token_dep = Annotated[
+    TokenData, Depends(TokenAuthorization(allowed_roles=GEN_AUTH_ROLES))
+]
+mgmt_auth_token_dep = Annotated[
+    TokenData, Depends(TokenAuthorization(allowed_roles=MGMT_AUTH_ROLES))
+]
+root_auth_token_dep = Annotated[
+    TokenData, Depends(TokenAuthorization(allowed_roles=ROOT_AUTH_ROLES))
+]

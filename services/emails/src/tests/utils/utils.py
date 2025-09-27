@@ -23,7 +23,7 @@ async def create_random_user_helper(db: AsyncSession) -> UserEmails:
     email = random_email()
 
     new_user = UserEmails(
-        username=username, email=email, password=get_password_hash(test_password)
+        username=username, email=email, password=await get_password_hash(test_password)
     )
     db.add(new_user)
     await db.commit()

@@ -26,7 +26,7 @@ update_package() {
 
     service_name=$(basename "$service_dir")
 
-    if is_package_in_dependencies "$package_name" "$service_dir"; then
+    if is_package_in_dependencies "$package_name"; then
         echo -e "${CYAN}Updating package $package_name in $service_name...${NC}"
         uv remove "$package_name" > /dev/null 2>&1 && uv add "$package_name" > /dev/null 2>&1
     else
@@ -44,6 +44,21 @@ add_package() {
     uv add "$package_name" > /dev/null 2>&1
 }
 
+# Function to remove a package
+remove_package() {
+    local package_name="$1"
+    local service_dir="$2"
+
+    service_name=$(basename "$service_dir")
+
+    if is_package_in_dependencies "$package_name"; then
+        echo -e "${CYAN}Removing package $package_name in $service_name...${NC}"
+        uv remove "$package_name" > /dev/null 2>&1
+    else
+        echo -e "${YELLOW}Package $package_name not found in $service_name dependencies. Skipping...${NC}"
+    fi
+}
+
 # Function to process each service
 process_services() {
     local action="$1"
@@ -58,6 +73,8 @@ process_services() {
             add_package "$package_name" "$service_dir"
         elif [ "$action" = "update" ]; then
             update_package "$package_name" "$service_dir"
+        elif [ "$action" = "remove" ]; then
+            remove_package "$package_name" "$service_dir"
         fi
 
         cd - > /dev/null 2>&1
@@ -66,22 +83,22 @@ process_services() {
 
 # Main logic to handle input arguments and actions
 if [ $# -lt 2 ]; then
-    echo -e "${RED}Usage: $0 <add|update> <package_name>${NC}"
+    echo -e "${RED}Usage: $0 <add|update|remove> <package_name>${NC}"
     exit 1
 fi
 
 action="$1"
 package_name="$2"
 
-if [ "$action" = "add" ] || [ "$action" = "update" ]; then
+if [ "$action" = "add" ] || [ "$action" = "update" ] || [ "$action" = "remove" ]; then
     process_services "$action" "$package_name"
 else
-    echo -e "${RED}Invalid action. Please use 'add' or 'update'.${NC}"
+    echo -e "${RED}Invalid action. Please use 'add', 'update', or 'remove'.${NC}"
     exit 1
 fi
 
 # Successful packages message
 echo ""
 echo -e "${GREEN}--------------------------------${NC}"
-echo -e "${GREEN}Packages successfully installed!${NC}"
+echo -e "${GREEN}All packages processed successfully!${NC}"
 echo -e "${GREEN}--------------------------------${NC}"

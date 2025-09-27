@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from libs.users_lib.models import UserBase
+from libs.users_lib.models import UserBase, UserRole, Users
 from libs.utils_lib.schemas import EventMessageBase
 
 
@@ -20,6 +20,10 @@ class UpdateUserPasswordEvent(EventMessageBase):
     new_password: str
 
 
+class UserPasswordUpdatedEvent(EventMessageBase):
+    user: Users
+
+
 class UpdateUserRoleEvent(EventMessageBase):
     user_id: UUID
-    new_role: str
+    new_role: UserRole

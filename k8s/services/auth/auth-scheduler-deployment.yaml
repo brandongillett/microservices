@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-scheduler
+  labels:
+    app: auth-scheduler
+spec:
+  replicas: ${AUTH_SCHEDULER_REPLICAS}
+  selector:
+    matchLabels:
+      app: auth-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: auth-scheduler
+    spec:
+      imagePullSecrets:
+        - name: docker-creds
+      initContainers:
+        - name: prestart-auth-scheduler
+          imagePullPolicy: IfNotPresent
+          image: ${IMAGE}
+          command: ["bash", "/app/scripts/prestart.sh"]
+          envFrom:
+            - configMapRef:
+                name: auth-env
+          env:
+            - name: ENVIRONMENT
+              value: ${ENVIRONMENT}
+            - name: DOMAIN
+              value: ${DOMAIN}
+            - name: PROJECT_NAME
+              value: ${PROJECT_NAME}
+            - name: FRONTEND_HOST
+              value: ${FRONTEND_HOST}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: NATS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nats-secrets
+                  key: NATS_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secrets
+                  key: AUTH_REDIS_URL
+            - name: ROOT_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: ROOT_USER_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: SECRET_KEY
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+      containers:
+        - name: auth-scheduler
+          imagePullPolicy: IfNotPresent
+          image: ${IMAGE}
+          command:
+            [
+              "taskiq",
+              "scheduler",
+              "src.tasks:scheduler",
+              "--log-level",
+              "INFO",
+              "--skip-first-run",
+            ]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          envFrom:
+            - configMapRef:
+                name: auth-env
+          env:
+            - name: ENVIRONMENT
+              value: ${ENVIRONMENT}
+            - name: DOMAIN
+              value: ${DOMAIN}
+            - name: PROJECT_NAME
+              value: ${PROJECT_NAME}
+            - name: FRONTEND_HOST
+              value: ${FRONTEND_HOST}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secrets
+                  key: POSTGRES_PASSWORD
+            - name: NATS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nats-secrets
+                  key: NATS_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secrets
+                  key: AUTH_REDIS_URL
+            - name: ROOT_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: ROOT_USER_PASSWORD
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: service-secrets
+                  key: SECRET_KEY
+      restartPolicy: Always
