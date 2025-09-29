@@ -75,24 +75,48 @@ function LandingPage() {
 					</VStack>
 
 					<HStack gap={6} flexWrap="wrap" justifyContent="center">
-						<Button
-							size="lg"
-							bg={semantic.button.primary.bg.default}
-							color={semantic.button.primary.fg.default}
-							px={10}
-							py={7}
-							fontSize="lg"
-							fontWeight="semibold"
-							borderRadius="xl"
-							_hover={{
-								bg: semantic.button.primary.bg.hover,
-								transform: "translateY(-2px)",
-								boxShadow: `0 12px 30px ${colors.brand.primary}40`,
-							}}
-							transition="all 0.3s ease"
-						>
-							Sign Up
-						</Button>
+						<Link to="/login">
+							<Button
+								size="lg"
+								bg={semantic.button.primary.bg.default}
+								color={semantic.button.primary.fg.default}
+								px={10}
+								py={7}
+								fontSize="lg"
+								fontWeight="semibold"
+								borderRadius="xl"
+								_hover={{
+									bg: semantic.button.primary.bg.hover,
+									transform: "translateY(-2px)",
+									boxShadow: `0 12px 30px ${colors.brand.primary}40`,
+								}}
+								transition="all 0.3s ease"
+							>
+								Login
+							</Button>
+						</Link>
+						<Link to="/register">
+							<Button
+								size="lg"
+								variant="outline"
+								borderColor={colors.brand.primary}
+								color={colors.brand.primary}
+								bg="transparent"
+								px={10}
+								py={7}
+								fontSize="lg"
+								fontWeight="semibold"
+								borderRadius="xl"
+								_hover={{
+									bg: colors.brand.primary + "10",
+									borderColor: colors.brand.primary,
+									transform: "translateY(-1px)",
+								}}
+								transition="all 0.3s ease"
+							>
+								Register
+							</Button>
+						</Link>
 					</HStack>
 				</VStack>
 
