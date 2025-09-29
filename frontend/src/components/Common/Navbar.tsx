@@ -1,6 +1,6 @@
 import { Box, Container, Flex, HStack, Text, VStack, IconButton } from "@chakra-ui/react";
 import { Link } from "@tanstack/react-router";
-import { FiHome, FiMenu, FiX, FiFileText, FiStar } from "react-icons/fi";
+import { FiHome, FiMenu, FiX } from "react-icons/fi";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";

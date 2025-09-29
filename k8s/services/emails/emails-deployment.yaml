@@ -135,12 +135,14 @@ spec:
             httpGet:
               path: /utils/health
               port: 8000
+            initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /utils/health
               port: 8000
+            initialDelaySeconds: 15
             periodSeconds: 10
             failureThreshold: 3
       restartPolicy: Always

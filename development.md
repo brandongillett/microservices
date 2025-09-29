@@ -11,8 +11,6 @@
   Adminer: <a href="http://adminer.localhost/">http://adminer.localhost/</a><br>
   NATS: <a href="http://nats.localhost/">http://nats.localhost/</a><br>
   MailCatcher: <a href="http://mailcatcher.localhost/">http://mailcatcher.localhost/</a><br>
-  Prometheus: <a href="http://prometheus.localhost/">http://prometheus.localhost/</a><br>
-  Grafana Dashboard: <a href="http://grafana.localhost/">http://grafana.localhost/</a><br>
   Traefik Dashboard: <a href="http://traefik.localhost/">http://traefik.localhost/</a><br>
   Backend: <a href="http://api.localhost/auth">http://api.localhost/{SERVICE} (e.g. http://api.localhost/auth)</a><br>
   Backend (Docs): <a href="http://api.localhost/docs">http://api.localhost/{SERVICE}/docs (e.g. http://api.localhost/auth/docs)</a><br>

@@ -106,33 +106,6 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
       - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
-  prometheus:
-    image: prom/prometheus:v2.52.0
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-      - traefik.http.routers.${STACK_NAME?Variable not set}-prometheus-http.rule=Host(`prometheus.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-prometheus-http.entrypoints=http
-      - traefik.http.services.${STACK_NAME?Variable not set}-prometheus.loadbalancer.server.port=9090
-    volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
-
-  grafana:
-    image: grafana/grafana:10.3.1
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER?Variable not set}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD?Variable not set}
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-      - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.rule=Host(`grafana.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-grafana-http.entrypoints=http
-      - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
-    depends_on:
-      - prometheus
-
   mailcatcher:
     image: schickling/mailcatcher
     ports:
@@ -175,6 +148,11 @@ services:
     networks:
       - traefik-public
       - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik-public

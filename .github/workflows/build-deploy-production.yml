@@ -41,8 +41,8 @@ jobs:
       DOCKER_PLATFORMS: linux/arm64 # ex. linux/amd64,linux/arm64
       BUILD_TAG: ${{ github.sha }}
       # Kubernetes settings
-      NAMESPACE: microservices-prd
-      DATABASE_NAMESPACE: microservices-db-prd
+      NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
+      DATABASE_NAMESPACE: ${{ secrets.PRODUCTION_DATABASE_NAMESPACE }}
       # Replica settings
       # Frontend
       FRONTEND_REPLICAS: 2
