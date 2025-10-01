@@ -65,3 +65,15 @@ Backend docs: [services/README.md](./services/README.md).
 ## Frontend README
 
 Frontend docs: [frontend/README.md](./frontend/README.md).
+
+## Acknowledgements
+
+- **[full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template)** - This project's design is heavily inspired by FastAPI's full stack template. The primary goal was to adapt its monolithic approach into a scalable microservices architecture.
+
+- **[fastapi-best-practices](https://github.com/zhanymkanov/fastapi-best-practices)** - Several performance optimizations, particularly for asynchronous operations, were inspired by the best practices found in this repository.
+
+- **[fastapi-tips](https://github.com/Kludex/fastapi-tips)** - Additional development tips and useful patterns were adopted from this repository.
+
+- **[faststream](https://github.com/ag2ai/faststream)** - This project relies on FastStream for asynchronous, event-driven communication between services.
+
+- **[taskiq](https://github.com/taskiq-python/taskiq)** - Taskiq is used for managing background jobs and scheduling periodic tasks across workers.
