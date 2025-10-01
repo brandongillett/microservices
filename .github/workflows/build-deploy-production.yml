@@ -45,19 +45,19 @@ jobs:
       DATABASE_NAMESPACE: ${{ secrets.PRODUCTION_DATABASE_NAMESPACE }}
       # Replica settings
       # Frontend
-      FRONTEND_REPLICAS: 2
+      FRONTEND_REPLICAS: 3
       # Services
-      AUTH_REPLICAS: 2
-      USERS_REPLICAS: 2
-      EMAILS_REPLICAS: 2
+      AUTH_REPLICAS: 3
+      USERS_REPLICAS: 3
+      EMAILS_REPLICAS: 3
       # Schedulers
-      AUTH_SCHEDULER_REPLICAS: 2
-      USERS_SCHEDULER_REPLICAS: 2
-      EMAILS_SCHEDULER_REPLICAS: 2
+      AUTH_SCHEDULER_REPLICAS: 3
+      USERS_SCHEDULER_REPLICAS: 3
+      EMAILS_SCHEDULER_REPLICAS: 3
       # Workers
-      AUTH_WORKER_REPLICAS: 2
-      USERS_WORKER_REPLICAS: 2
-      EMAILS_WORKER_REPLICAS: 2
+      AUTH_WORKER_REPLICAS: 3
+      USERS_WORKER_REPLICAS: 3
+      EMAILS_WORKER_REPLICAS: 3
     steps:
       # 1) Checkout & detect changed targets
       - name: Checkout code

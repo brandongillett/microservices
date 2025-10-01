@@ -125,7 +125,7 @@ In this project, it is essential to maintain consistent naming conventions for a
 
 ### Environment Variables
 
-- The `.env` file will define most of the environment variables used for local development and production. However, some variables are service-specific in `docker-compose.yml`. For example, each service must pass the environment variable `POSTGRES_DB` for database configuration. Ensure that the value of `POSTGRES_DB` corresponds to the service being developed.
+- The `.env` file will define most of the environment variables used for local development. However, some variables are service-specific in `docker-compose.yml`. For example, each service must pass the environment variable `POSTGRES_DB` for database configuration. Ensure that the value of `POSTGRES_DB` corresponds to the service being developed.
 - Example in docker-compose.yml for the `auth` service:
 
 ```

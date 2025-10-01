@@ -1,6 +1,6 @@
 # 🧩 Microservices Boilerplate
 
-A production-ready boilerplate for building scalable, event-driven microservices with Python, React, and Kubernetes. Designed for high performance, developer efficiency, and operational excellence.
+A production-ready boilerplate for building scalable, event-driven microservices with Python, React, and Kubernetes.
 
 ## 🧠 Backend: Python Microservices
 

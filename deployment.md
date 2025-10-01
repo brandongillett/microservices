@@ -4,21 +4,36 @@
 
 <h1 align="center">Deployment</h1>
 
-This document outlines the process for deploying the application using the provided GitHub Actions workflows. The deployment pipeline is designed for automated, zero-downtime deployments to a Kubernetes cluster.
+This document outlines the process for deploying the application using the provided GitHub Actions workflows. The deployment pipeline is designed for high availability, automated, zero-downtime deployments to a Kubernetes cluster.
 
 ---
 
 ## Prerequisites
 
-Before you can deploy, you must have the following set up:
+Before deploying, ensure the following infrastructure is set up and accessible:
 
-- A Kubernetes cluster with `kubectl` access.
-- A Docker Hub account (or another container registry).
-- Prometheus Operator or a similar tool for scraping metrics (recommended).
+- **Kubernetes Cluster:** A running cluster with `kubectl` access configured.
+- **Container Registry:** A Docker Hub account or another OCI-compliant container registry.
+- **Traefik:** The Traefik Ingress controller should be installed in your cluster.
+- **PostgreSQL Server:** A running PostgreSQL instance.
+- **Redis Server:** A running Redis instance.
+- **NATS Server:** A running NATS instance for messaging.
+- **Prometheus:** A Prometheus instance for scraping metrics (recommended).
 
-## Deployment Variables
+## Getting Started
 
-Deployment is configured entirely through **GitHub Secrets**. You must create the following secrets in your repository for both `STAGING` and `PRODUCTION` environments.
+This section covers the core concepts needed to understand and manage the deployment process.
+
+- **Directory Structure:** The deploy actions rely on a strict naming convention. Each service in `k8s/services/` must have a corresponding folder in `services/` with the exact same name (all lowercase). The frontend manifests are located in `k8s/frontend/`.
+- **Variable Substitution:** The Kubernetes manifests (`.yaml` files) are templates. Values like `${IMAGE}` are substituted by the GitHub Actions workflow. Use this pattern when adding new services.
+- **Skipping Deployments:** A build/deploy workflow for an environment will be skipped if its `{ENV}_KUBE_CONFIG` secret is not found. This is useful for disabling a staging environment without modifying workflow files.
+- **Private Images:** The workflows push images to a container registry. It is your responsibility to ensure the registry repositories are private and secure.
+
+## Configuration
+
+### Github Secrets
+
+Most variables are configured through **GitHub Secrets**. You must create the following secrets in your repository for both `STAGING` and `PRODUCTION` environments.
 
 In the variable names below, replace `{ENV}` with either `STAGING` or `PRODUCTION`.
 
@@ -38,6 +53,10 @@ In the variable names below, replace `{ENV}` with either `STAGING` or `PRODUCTIO
 - `{ENV}_SMTP_PASSWORD` - The password for the SMTP server.
 - `{ENV}_SECRET_KEY` - The application's global secret key for signing tokens, etc.
 - `{ENV}_ROOT_USER_PASSWORD` - An optional password for a default root user (this is needed for testing so its recommended to keep it for staging).
+
+### ConfigMap
+
+All non-sensitive, plain-text variables are stored in `env-configmap.yaml` files located within each service's manifest directory (e.g., `k8s/services/auth/env-configmap.yaml`).
 
 ## Deployment Customization
 

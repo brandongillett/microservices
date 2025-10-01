@@ -43,7 +43,7 @@ done
 # Pre-commit
 echo -e "${YELLOW}Running pre-commit...${NC}"
 if ! uv run --with pre-commit pre-commit run --all-files --verbose; then
-    echo -e "${YELLOW}Running pre=commit once more...${NC}"
+    echo -e "${YELLOW}Running pre-commit once more...${NC}"
     uv run --with pre-commit pre-commit run --all-files --verbose
 fi
 
