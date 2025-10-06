@@ -193,6 +193,99 @@ The default available dependencies are:
 - **`mgmt_auth_token_dep`**: Management access (`admin`, `root`).
 - **`root_auth_token_dep`**: Root-only access.
 
+# Service Communication
+
+This section details the event-driven architecture used for communication between services. The system is designed to ensure data consistency, trigger asynchronous workflows, and retrieve information across service boundaries reliably.
+
+### Architecture
+
+Our inter-service communication is built on a durable, event-driven foundation:
+
+- **In/Outbox Pattern:** We utilize an In/Outbox pattern to guarantee **at-least-once message delivery**, preventing data loss even during network partitions or service outages.
+- **NATS Jetstream:** NATS Jetstream serves as the high-performance message broker, enabling fast and persistent publish/subscribe (pub/sub) capabilities.
+- **Acknowledgements:** Subscribers send acknowledgements (`ack`) upon successful event processing, confirming receipt and completion.
+- **Automated Retries:** A scheduled job periodically re-sends any failed or pending outbox events, ensuring eventual consistency.
+- **Monitoring:** Failed events are exposed as Prometheus metrics, allowing for robust monitoring and alerting.
+
+### Implementing Service Communication
+
+The process of creating and handling events is standardized to ensure consistency. The following guide walks through publishing a new event and subscribing to it.
+
+#### Step 1: Define an Event Route
+
+First, define a unique route for your event. This acts as a centralized, typed identifier for the event's subject name, preventing typos and ensuring uniformity between publishers and subscribers.
+
+Event routes for a given service should be defined in its shared library (e.g., `libs/auth_lib/events.py`).
+
+```python
+from libs.utils_lib.core.faststream import nats
+from libs.utils_lib.schemas import EventRoute
+from src.core.config import settings
+CREATE_USER_ROUTE = EventRoute(
+   service=settings.SERVICE_NAME,
+   name="create.user",
+   stream_name=nats.stream,
+)
+```
+
+- `service` Always use `settings.SERVICE_NAME`. This prefixes the subject with the publishing service's name (e.g., `auth.user.created`).
+- `name` A unique, dot-separated name describing the event.
+- `stream_name` The NATS stream the event will be published to. This is typically the same for all routes.
+
+#### Step 2: Create the Event Schema
+
+Next, define the data payload for your event using a schema. This ensures that event data is strongly typed and validated. Schemas should also be defined in the shared library (e.g., `libs/auth_lib/schemas.py`).
+
+```python
+from libs.utils_lib.schemas import EventMessageBase
+class CreateUserEvent(EventMessageBase):
+  user: Users
+```
+
+- `EventMessageBase`: This base schema automatically includes essential fields like `event_id` and the publishing `service`.
+
+#### Step 3: Publish the Event
+
+Publishing is a two-part process: first, create an `Outbox` entry in the database within your transaction, and second, publish it to NATS after the transaction commits. Helper functions streamline this process.
+
+This is typically done within a database transaction where a resource is being created or updated.
+
+```python
+from uuid import uuid4
+from libs.auth_lib.schemas import CreateUserEvent
+from libs.utils_lib.crud import create_outbox_event
+from libs.utils_lib.api.events import handle_publish_event
+event_users_create_user_id = uuid4()
+event_users_create_user_schema = CreateUserEvent(
+   event_id=event_users_create_user_id, user=new_user
+)
+
+event_users_create_user = await create_outbox_event(
+   session=session,
+   event_id=event_users_create_user_id,
+   event_type=CREATE_USER_ROUTE.subject_for("users"),
+   data=event_users_create_user_schema.model_dump(mode="json"),
+   commit=False,
+)
+
+await handle_publish_event(
+   session=session,
+   event=event_users_create_user,
+   event_schema=event_users_create_user_schema,
+)
+```
+
+Key parameters for `create_outbox_event`:
+
+- `session` The current active database session.
+- `event_id` A unique UUID for this event instance.
+- `event_type` The event's subject name. The `subject_for()` helper on your `EventRoute` generates this, taking the target service as an argument.
+- `data` The JSON-serialized event schema.
+- `commit` Set to `False` if you plan to commit the outbox event along with other database changes in the same transaction.
+
+The `handle_publish_event` function then takes the created outbox entry and publishes its payload to the NATS Jetstream.
+
 ## More to come
 
-- NATS and how services send and receive events to communicate.
+- Subscriber events
+- Prometheus monitoring
