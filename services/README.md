@@ -201,11 +201,11 @@ This section details the event-driven architecture used for communication betwee
 
 Our inter-service communication is built on a durable, event-driven foundation:
 
-- **In/Outbox Pattern:** We utilize an In/Outbox pattern to guarantee **at-least-once message delivery**, preventing data loss even during network partitions or service outages.
+- **In/Outbox Pattern:** We utilize an In/Outbox pattern to guarantee **at-least-once message delivery**, preventing data loss even during service outages.
 - **NATS Jetstream:** NATS Jetstream serves as the high-performance message broker, enabling fast and persistent publish/subscribe (pub/sub) capabilities.
 - **Acknowledgements:** Subscribers send acknowledgements (`ack`) upon successful event processing, confirming receipt and completion.
 - **Automated Retries:** A scheduled job periodically re-sends any failed or pending outbox events, ensuring eventual consistency.
-- **Monitoring:** Failed events are exposed as Prometheus metrics, allowing for robust monitoring and alerting.
+- **Monitoring:** Failed events are exposed as Prometheus metrics, allowing for monitoring and alerting.
 
 ### Implementing Service Communication
 
@@ -285,7 +285,51 @@ Key parameters for `create_outbox_event`:
 
 The `handle_publish_event` function then takes the created outbox entry and publishes its payload to the NATS Jetstream.
 
+#### Step 4: Subscribing to the event
+
+Subscribing to an event involves creating a handler that listens on a specific NATS subject. This process is standardized using a decorator and a helper function to manage the complexities of the In/Outbox pattern and message acknowledgements.
+
+1.  **The Subscriber Decorator:** The `@nats_router.subscriber` decorator from FastStream registers a function to listen for messages. We use the `EventRoute` object created in Step 1 to provide the correct `subject`, `stream`, and other configuration details, ensuring consistency.
+
+2.  **The `handle_subscriber_event` Helper:** This function wraps your core business logic. It's responsible for creating an `Inbox` entry to prevent duplicate processing, running your logic within a database transaction, and sending the final acknowledgement (`ack`) back to the publisher upon success.
+
+```python
+from faststream.nats.fastapi import NatsRouter
+
+from libs.auth_lib.api.events import CREATE_USER_ROUTE
+from libs.auth_lib.schemas import CreateUserEvent
+from libs.utils_lib.api.events import handle_subscriber_event
+
+nats_router = NatsRouter()
+
+@nats_router.subscriber(
+    subject=CREATE_USER_ROUTE.subject,
+    stream=CREATE_USER_ROUTE.stream,
+    pull_sub=CREATE_USER_ROUTE.pull_sub,
+    durable=CREATE_USER_ROUTE.durable,
+)
+async def create_user_event(session: async_session_dep, data: CreateUserEvent) -> None:
+
+    async def process_event(session: AsyncSession, data: CreateUserEvent) -> None:
+
+        dbObj = Users.model_validate(data.user)
+        session.add(dbObj)
+        await session.commit()
+        await session.refresh(dbObj)
+
+   await handle_subscriber_event(
+        session=session,
+        event_id=data.event_id,
+        event_type=CREATE_USER_ROUTE.subject,
+        process_fn=process_event,
+        data=data,
+    )
+
+```
+
+- `process_event`: An inner function that contains only the core business logic (e.g., creating a user in the local database). It must accept `session` and `data` as arguments.
+- `handle_subscriber_event`: The helper that orchestrates the process. It takes your business logic (`process_fn`) and executes it safely within the transactional inbox flow.
+
 ## More to come
 
-- Subscriber events
 - Prometheus monitoring
