@@ -11,7 +11,7 @@ from src.crud import (
     update_user_username,
     verify_user_email,
 )
-from src.tests.utils.utils import create_random_user_helper
+from tests.utils.utils import create_random_user_helper
 
 
 @pytest.mark.anyio

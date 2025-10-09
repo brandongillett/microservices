@@ -24,6 +24,7 @@ COPY ./scripts /app/scripts
 COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 COPY ./src /app/src
+COPY ./tests /app/tests
 
 # Copy libs if it exists
 COPY ./libs* /app/libs

@@ -5,7 +5,7 @@ set -e
 if [ "$ENVIRONMENT" = "local" ] || [ "$ENVIRONMENT" = "staging" ]; then
     python src/prestart.py > /dev/null 2>&1
 
-    coverage run --source=src -m pytest
+    coverage run -m pytest tests/
     # coverage report --show-missing
     coverage html --title "${@-coverage}"
 else

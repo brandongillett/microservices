@@ -65,7 +65,7 @@ class Limiter:
             return None
 
         try:
-            redis = await self.redis_client.get_client()
+            redis = self.redis_client.client
         except Exception:
             logger.warning("Redis client is not initialized or connected.")
             return None

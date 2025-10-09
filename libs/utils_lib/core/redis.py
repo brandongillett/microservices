@@ -41,7 +41,7 @@ class RedisClient:
         Closes the Redis connection.
         """
         if self.client:
-            await self.client.close()
+            await self.client.aclose()
             logger.info("Redis client closed.")
         if self.pool:
             await self.pool.aclose()
@@ -57,20 +57,6 @@ class RedisClient:
         if not self.client:
             raise RedisError("No active Redis client found.")
         return await self.client.ping()
-
-    async def get_client(self) -> Redis:
-        """
-        Returns the Redis client, connecting if necessary.
-
-        Returns:
-            Redis: The Redis client.
-        """
-        if self.client is None:
-            logger.info("No active Redis client found, attempting to connect...")
-            await self.connect()
-        if self.client is None:
-            raise RedisError("Failed to establish a Redis client connection.")
-        return self.client
 
 
 redis_client = RedisClient(redis_url=utils_lib_settings.REDIS_URL)

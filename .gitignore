@@ -4,3 +4,4 @@ collections
 .ruff_cache
 todo.txt
 .envrc
+.DS_Store

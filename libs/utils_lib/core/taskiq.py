@@ -87,7 +87,7 @@ class MyScheduleSource(ScheduleSource):
             if isinstance(persistent, str):
                 persistent = persistent.lower() == "true"
 
-            redis = await self.redis_client.get_client()
+            redis = self.redis_client.client
 
             lock_key = f"lock:add_schedule:{schedule.schedule_id}"
             lock = await redis.set(lock_key, "lock", nx=True, ex=30)
@@ -182,7 +182,7 @@ class MyScheduleSource(ScheduleSource):
         Args:
             task (ScheduledTask): The scheduled task.
         """
-        redis = await self.redis_client.get_client()
+        redis = self.redis_client.client
         lock = await redis.set(
             f"lock:schedule:{task.schedule_id}", "lock", nx=True, ex=30
         )

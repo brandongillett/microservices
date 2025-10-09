@@ -330,6 +330,6 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
 - `process_event`: An inner function that contains only the core business logic (e.g., creating a user in the local database). It must accept `session` and `data` as arguments.
 - `handle_subscriber_event`: The helper that orchestrates the process. It takes your business logic (`process_fn`) and executes it safely within the transactional inbox flow.
 
-## More to come
+# Prometheus Metrics
 
-- Prometheus monitoring
+Pending...

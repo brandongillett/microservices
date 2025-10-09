@@ -15,7 +15,7 @@ from src.crud import (
     get_refresh_tokens,
 )
 from src.schemas import RefreshTokenCreate
-from src.tests.utils.utils import create_user_and_token_helper
+from tests.utils.utils import create_user_and_token_helper
 
 
 @pytest.mark.anyio

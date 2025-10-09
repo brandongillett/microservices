@@ -90,7 +90,7 @@ async def gen_password_reset_token(user_id: UUID) -> str:
     data = {"user_id": str(user_id), "token_id": str(token_id)}
 
     redis_key = f"password_reset_token:{token_id}"
-    redis = await redis_client.get_client()
+    redis = redis_client.client
 
     await redis.set(
         redis_key,
@@ -127,7 +127,7 @@ async def verify_password_reset_token(token: str) -> tuple[UUID, UUID]:
         )
 
     redis_key = f"password_reset_token:{token_id}"
-    redis = await redis_client.get_client()
+    redis = redis_client.client
     stored_user_id = await redis.get(redis_key)
 
     if not stored_user_id or stored_user_id != str(user_id):
@@ -146,5 +146,5 @@ async def invalidate_password_reset_token(token_id: UUID) -> None:
         token_id (UUID): The token ID to invalidate.
     """
     redis_key = f"password_reset_token:{token_id}"
-    redis = await redis_client.get_client()
+    redis = redis_client.client
     await redis.delete(redis_key)

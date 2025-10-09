@@ -14,7 +14,7 @@ from libs.users_lib.models import UserRole
 from libs.utils_lib.tests.utils.utils import (
     random_lower_string,
 )
-from src.tests.utils.utils import create_random_user_helper
+from tests.utils.utils import create_random_user_helper
 
 
 @pytest.mark.anyio
