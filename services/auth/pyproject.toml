@@ -17,12 +17,8 @@ dependencies = [
     "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
     "pyjwt<3.0.0,>=2.8.0",
     "cryptography>=43.0.3",
-    "asyncio>=3.4.3",
-    "pytest-asyncio>=0.23.8",
-    "pytest>=7.4.4",
     "sqlalchemy-utils>=0.41.2",
     "itsdangerous>=2.2.0",
-    "watchdog>=6.0.0",
     "taskiq>=0.11.16",
     "taskiq-redis>=1.0.4",
     "croniter>=6.0.0",
@@ -30,17 +26,18 @@ dependencies = [
     "faststream[nats]>=0.5.43",
     "argon2-cffi>=25.1.0",
     "asyncpg>=0.30.0",
-    "sqlalchemy-cockroachdb>=2.0.3",
     "redis>=5.2.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest<8.0.0,>=7.4.3",
+    "pytest-asyncio>=0.23.8",
     "mypy<2.0.0,>=1.8.0",
     "ruff<1.0.0,>=0.2.2",
     "pre-commit<4.0.0,>=3.6.2",
     "coverage<8.0.0,>=7.4.3",
+    "watchdog>=6.0.0",
 ]
 
 [build-system]

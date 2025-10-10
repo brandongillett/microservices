@@ -24,7 +24,7 @@
 To run the local development environment, use the following command (in a separate terminal):
 
 ```
-docker compose build && docker compose up --watch
+docker compose up --build --watch
 ```
 
 This will:
