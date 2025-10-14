@@ -89,7 +89,7 @@ source .venv/bin/activate
 
 To maintain code quality and consistency, our project utilizes a custom formatting script with a pre-commit hook. This setup ensures that code adheres to our standards before being added to the repository.
 
-#### Preferred Method: Formatting Script 
+### Preferred Method: Formatting Script 
 
 Instead of running pre-commit directly, use the formatting script `scripts/format.sh`, which formats all files and ensures pre-commit checks are also run. This is the recommended approach to maintain consistency across the project.
 

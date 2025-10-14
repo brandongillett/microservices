@@ -1,21 +1,26 @@
+from typing import Any, cast
+
 from fastapi import HTTPException, Request, status
 from itsdangerous import URLSafeTimedSerializer
+from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
 
 
 # Security Settings
-class security_settings(BaseSettings):
+class SecuritySettings(BaseSettings):
     # Rate limit settings
-    def get_enable_rate_limit(self) -> bool:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def ENABLE_RATE_LIMIT(self) -> bool:
+        """
+        Rate limiting is enabled for all environments except 'local'.
+        """
         return utils_lib_settings.ENVIRONMENT != "local"
 
-    # rate limiting disabled in local environment
-    ENABLE_RATE_LIMIT = property(get_enable_rate_limit)
 
-
-security_settings = security_settings()  # type: ignore
+security_settings = SecuritySettings()
 
 
 # Get IP address from request headers
@@ -42,7 +47,7 @@ def get_client_ip(request: Request) -> str:
 
 
 # URL safe token generation and verification
-def gen_url_token(data: dict, salt: str) -> str:
+def gen_url_token(data: dict[str, Any], salt: str) -> str:
     """
     Generate a URL-safe token with the provided data and salt.
 
@@ -60,7 +65,7 @@ def gen_url_token(data: dict, salt: str) -> str:
     return serializer.dumps(data)
 
 
-def verify_url_token(token: str, salt: str, expiration: int) -> dict:
+def verify_url_token(token: str, salt: str, expiration: int) -> dict[str, Any]:
     """
     Verify a URL-safe token and extract the data.
 
@@ -78,7 +83,7 @@ def verify_url_token(token: str, salt: str, expiration: int) -> dict:
 
     try:
         data = serializer.loads(token, max_age=expiration * 60)
-        return data
+        return cast(dict[str, Any], data)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"

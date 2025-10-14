@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, Column, Text
@@ -22,7 +23,7 @@ class JobStatus(Enum):
 # Base models
 class EventBase(SQLModel):
     event_type: str = Field(max_length=255)
-    data: dict = Field(default={})
+    data: dict[str, Any] = Field(default={})
     status: EventStatus = Field(default=EventStatus.pending)
     retries: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -49,20 +50,20 @@ class JobsBase(SQLModel):
 # Database models
 class EventInbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
-    data: dict = Field(default={}, sa_column=Column(JSON))
+    data: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     error_message: str | None = Field(default=None, sa_column=Column(Text))
 
 
 class EventOutbox(EventBase, table=True):
     id: UUID = Field(primary_key=True)
-    data: dict = Field(default={}, sa_column=Column(JSON))
+    data: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     error_message: str | None = Field(default=None, sa_column=Column(Text))
 
 
 class Jobs(JobsBase, table=True):
     id: str = Field(primary_key=True, default_factory=lambda: uuid4().hex)
     task_name: str = Field(max_length=255)
-    args: dict = Field(default={}, sa_column=Column(JSON))
-    kwargs: dict = Field(default={}, sa_column=Column(JSON))
-    labels: dict = Field(default={}, sa_column=Column(JSON))
+    args: list[Any] = Field(default={}, sa_column=Column(JSON))
+    kwargs: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
+    labels: dict[str, Any] = Field(default={}, sa_column=Column(JSON))
     last_run_error: str | None = Field(default=None, sa_column=Column(Text))

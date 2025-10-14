@@ -1,5 +1,6 @@
 from typing import Any
 
+from pydantic import computed_field
 from pydantic_settings import BaseSettings
 from taskiq import PrometheusMiddleware, TaskiqEvents, TaskiqScheduler, TaskiqState
 from taskiq_redis import RedisStreamBroker
@@ -17,8 +18,10 @@ from libs.utils_lib.tasks import (
 
 
 # Tasks Settings
-class tasks_settings(BaseSettings):
-    def get_jobs(self) -> dict[str, Any]:
+class TasksSettings(BaseSettings):
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def JOBS(self) -> dict[str, Any]:
         return {
             "resend_outbox_events": {
                 "function": resend_outbox_events_task,
@@ -40,10 +43,8 @@ class tasks_settings(BaseSettings):
             # },
         }
 
-    JOBS = property(get_jobs)
 
-
-tasks_settings = tasks_settings()  # type: ignore
+tasks_settings = TasksSettings()
 
 broker = (
     RedisStreamBroker(utils_lib_settings.REDIS_URL)

@@ -1,9 +1,10 @@
+from pydantic import computed_field
 from pydantic_settings import BaseSettings
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
 
 
-class settings(BaseSettings):
+class Settings(BaseSettings):
     SERVICE_NAME: str = "emails"
 
     # SMTP settings
@@ -20,7 +21,9 @@ class settings(BaseSettings):
     ASSETS_URL: str = f"{utils_lib_settings.FRONTEND_HOST}/assets"
 
     # Tokens URL (for retrieving design tokens)
-    def get_tokens_url(self) -> str | None:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def TOKENS_URL(self) -> str | None:
         """
         Returns the URL for the tokens.
 
@@ -34,8 +37,5 @@ class settings(BaseSettings):
             else f"{self.ASSETS_URL}/tokens"
         )
 
-    # assets url
-    TOKENS_URL = property(get_tokens_url)
 
-
-settings = settings()  # type: ignore
+settings = Settings()  # type: ignore

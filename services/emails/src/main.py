@@ -25,7 +25,7 @@ from src.core.config import settings
 from src.tasks import tasks_settings
 
 
-class app_settings(BaseSettings):
+class AppSettings(BaseSettings):
     THREAD_POOL_SIZE: int = 40
     TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [{settings.SERVICE_NAME}]"
     ROOT_PATH: str = f"/{settings.SERVICE_NAME}"
@@ -40,7 +40,7 @@ class app_settings(BaseSettings):
     }
 
 
-app_settings = app_settings()  # type: ignore
+app_settings = AppSettings()
 
 
 @asynccontextmanager
@@ -77,7 +77,9 @@ app = FastAPI(
     version="latest",
     title=app_settings.TITLE,
     description=app_settings.DESCRIPTION,
-    docs_url=utils_lib_settings.DOCS_URL,
+    docs_url=utils_lib_settings.DOCS_URL
+    if utils_lib_settings.ENVIRONMENT in ["local", "staging"]
+    else None,
     lifespan=lifespan,
     swagger_ui_parameters=app_settings.swagger_ui_parameters,
     root_path=app_settings.ROOT_PATH,
@@ -108,7 +110,9 @@ app_v1 = FastAPI(
     version="v1",
     title=app_settings.TITLE,
     description=app_settings.DESCRIPTION,
-    docs_url=utils_lib_settings.DOCS_URL,
+    docs_url=utils_lib_settings.DOCS_URL
+    if utils_lib_settings.ENVIRONMENT in ["local", "staging"]
+    else None,
 )
 
 app_v1.include_router(v1_router)

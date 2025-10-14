@@ -23,6 +23,24 @@ To evaluate how much of the code is covered by tests, we utilize coverage report
 
 Tests can only be run in `local` and `staging` environments. Ensure you are in the appropriate environment before attempting to run the tests to avoid unexpected behavior.
 
+## Linter
+
+In addition to the pre-commit hook, you can manually run lint checks using the script located in the `./services/{SERVICE}/lint.sh` file of each service. This script is designed to check for code errors and enforce coding standards across your services code.
+
+You can execute all linters using the following bash script, which will completely wipe volumes and rebuild the containers:
+
+```
+bash scripts/lint.sh
+```
+
+If your containers are already running and you want to execute the linter without stopping the current processes, run the following command in the desired services container (e.g. auth)
+
+```
+docker compose exec -t auth bash scripts/lint.sh
+```
+
+Keep in mind these checks will also be done when pushing to the main branch.
+
 ## API Versioning
 
 In this project, we have adopted a versioning strategy for our services to ensure smooth upgrades and backward compatibility for both the development and production environments. The versioning system is designed to provide clear separation between different API versions while also offering flexibility for continuous development and deployment. Below is a breakdown of how the versioning system works:
@@ -90,24 +108,6 @@ alembic revision --autogenerate -m "{INSERT DESCRIPTION OF CHANGES HERE}"
 ```
 alembic upgrade head
 ```
-
-## Linter
-
-In addition to the pre-commit hook, you can manually run lint checks using the script located in the `./services/{SERVICE}/lint.sh` file of each service. This script is designed to check for code errors and enforce coding standards across your services code.
-
-You can execute all linters using the following bash script, which will completely wipe volumes and rebuild the containers:
-
-```
-bash scripts/lint.sh
-```
-
-If your containers are already running and you want to execute the linter without stopping the current processes, run the following command in the desired services container (e.g. auth)
-
-```
-docker compose exec -t auth bash scripts/lint.sh
-```
-
-Keep in mind these checks will also be done when pushing to the main branch.
 
 ## Service Uniformity
 

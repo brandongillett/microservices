@@ -1,5 +1,6 @@
 import time
-from typing import ClassVar
+from collections.abc import MutableMapping
+from typing import Any, ClassVar
 
 from fastapi import Request
 from prometheus_client import Counter, Histogram
@@ -9,7 +10,7 @@ from starlette.routing import Match
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
-class metrics(BaseSettings):
+class Metrics(BaseSettings):
     REQUEST_COUNT: ClassVar[Counter] = Counter(
         "http_requests_total",
         "Total HTTP requests",
@@ -22,7 +23,7 @@ class metrics(BaseSettings):
     )
 
 
-metrics = metrics()
+metrics = Metrics()
 
 
 class PrometheusMiddleware:
@@ -70,7 +71,7 @@ class PrometheusMiddleware:
         status_code = status.HTTP_408_REQUEST_TIMEOUT
 
         # Define a custom send to intercept the response status
-        async def metrics_send(message):
+        async def metrics_send(message: MutableMapping[str, Any]) -> None:
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]

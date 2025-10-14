@@ -2,6 +2,6 @@
 set -e
 set -x
 
-mypy src
+mypy --package src --package libs
 ruff check src libs scripts
 ruff format src libs scripts --check

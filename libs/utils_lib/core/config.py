@@ -2,13 +2,13 @@ import secrets
 import warnings
 from typing import Literal
 
-from pydantic import PostgresDsn, computed_field, model_validator
+from pydantic import computed_field, model_validator
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings
 from typing_extensions import Self
 
 
-class settings(BaseSettings):
+class Settings(BaseSettings):
     DOMAIN: str = "localhost"
     PROJECT_NAME: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
@@ -39,7 +39,7 @@ class settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def DATABASE_URL(self) -> PostgresDsn:
+    def DATABASE_URL(self) -> MultiHostUrl:
         return MultiHostUrl.build(
             scheme=f"{self.POSTGRES_CONNECTION_SCHEME}+asyncpg",
             username=self.POSTGRES_USER,
@@ -51,7 +51,7 @@ class settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def READ_DATABASE_URL(self) -> PostgresDsn | None:
+    def READ_DATABASE_URL(self) -> MultiHostUrl | None:
         if self.POSTGRES_READ_SERVER:
             return MultiHostUrl.build(
                 scheme=f"{self.POSTGRES_CONNECTION_SCHEME}+asyncpg",
@@ -63,7 +63,9 @@ class settings(BaseSettings):
             )
         return None
 
-    def get_cors_origins(self) -> list[str]:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def CORS_ORIGINS(self) -> list[str]:
         """
         Returns a list of allowed CORS origins based on the environment.
         Returns:
@@ -72,22 +74,15 @@ class settings(BaseSettings):
         # Fix this to allow api.{DOMAIN} to avoid CORS issues
         return [self.FRONTEND_HOST]
 
-    CORS_ORIGINS = property(get_cors_origins)
-
-    def get_docs_url(self) -> str | None:
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def DOCS_URL(self) -> str | None:
         """
-        Returns the URL for the API documentation. (Only available in local and staging environments.)
-
-        Returns:
-            str | None: The URL for the API documentation.
+        Returns the docs URL for dev environments, otherwise None.
         """
-        if self.ENVIRONMENT == "local" or self.ENVIRONMENT == "staging":
+        if self.ENVIRONMENT in ["local", "staging"]:
             return "/docs"
-        else:
-            return None
-
-    # docs url if environment is local
-    DOCS_URL = property(get_docs_url)
+        return None
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
@@ -109,4 +104,4 @@ class settings(BaseSettings):
         return self
 
 
-settings = settings()  # type: ignore
+settings = Settings()  # type: ignore

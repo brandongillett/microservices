@@ -10,11 +10,11 @@ from libs.utils_lib.core.config import settings
 
 
 # Security Settings
-class security_settings(BaseSettings):
+class SecuritySettings(BaseSettings):
     pass
 
 
-security_settings = security_settings()  # type: ignore
+security_settings = SecuritySettings()
 
 
 # JWT token generation

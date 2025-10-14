@@ -65,7 +65,7 @@ class Limiter:
             return None
 
         try:
-            redis = self.redis_client.client
+            redis = self.redis_client.get_client()
         except Exception:
             logger.warning("Redis client is not initialized or connected.")
             return None
@@ -76,8 +76,8 @@ class Limiter:
             key = f"{identifier_base}:{unit}"
             try:
                 current_count = await redis.eval(
-                    self.REDIS_LUA_INCREMENT, 1, key, expiry
-                )
+                    self.REDIS_LUA_INCREMENT, 1, key, str(expiry)
+                )  # type: ignore
 
                 if int(current_count) > count:
                     raise HTTPException(
@@ -105,7 +105,7 @@ class Limiter:
             enable_limiter (bool, optional): Whether to enable the rate limiter. Defaults to True.
         """
         cls.redis_client = redis_client
-        cls.enable_limiter = enable_limiter
+        cls.enable_limiter = enable_limiter if enable_limiter is not None else True
 
     async def get_identifier(self, request: Request) -> str:
         """

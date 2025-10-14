@@ -1,8 +1,8 @@
 from pydantic_settings import BaseSettings
 
 
-class settings(BaseSettings):
+class Settings(BaseSettings):
     SERVICE_NAME: str = "users"
 
 
-settings = settings()  # type: ignore
+settings = Settings()

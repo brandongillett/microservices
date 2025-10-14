@@ -20,12 +20,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class utils_settings(BaseSettings):
+class UtilsSettings(BaseSettings):
     # Cache settings
     CACHE_TTL_SECONDS: int = 0 if utils_lib_settings.ENVIRONMENT == "local" else 600
 
 
-utils_settings = utils_settings()  # type: ignore
+utils_settings = UtilsSettings()
 
 _cached_tokens: dict[str, Any] | None = None
 _cache_timestamp: float | None = None

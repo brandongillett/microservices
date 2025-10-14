@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -100,7 +100,7 @@ async def handle_subscriber_event(
     session: AsyncSession,
     event_id: UUID,
     event_type: str,
-    process_fn: Callable,
+    process_fn: Callable[[AsyncSession, Any], Awaitable[Any]],
     data: Any,
 ) -> None:
     """

@@ -26,7 +26,7 @@ from src.tasks import tasks_settings
 from src.utils import init_root_user
 
 
-class app_settings(BaseSettings):
+class AppSettings(BaseSettings):
     THREAD_POOL_SIZE: int = 40
     TITLE: str = f"{utils_lib_settings.PROJECT_NAME} [{settings.SERVICE_NAME}]"
     ROOT_PATH: str = f"/{settings.SERVICE_NAME}"
@@ -45,7 +45,7 @@ class app_settings(BaseSettings):
     }
 
 
-app_settings = app_settings()  # type: ignore
+app_settings = AppSettings()
 
 
 @asynccontextmanager

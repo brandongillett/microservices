@@ -1,10 +1,11 @@
 import importlib
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import ClassVar, cast
+from typing import Any, ClassVar, cast
 
 from prometheus_client import Counter, Histogram
+from pydantic import ValidationError, create_model
 from pydantic_settings import BaseSettings
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -17,10 +18,10 @@ from libs.utils_lib.crud import (
     get_persistent_failed_jobs,
     get_persistent_missed_jobs,
 )
-from libs.utils_lib.models import Jobs, JobStatus
+from libs.utils_lib.models import EventStatus, Jobs, JobStatus
 
 
-class metrics(BaseSettings):
+class Metrics(BaseSettings):
     JOB_RUNS_TOTAL: ClassVar[Counter] = Counter(
         "taskiq_job_runs_total",
         "Total number of job executions.",
@@ -43,11 +44,11 @@ class metrics(BaseSettings):
     )
 
 
-metrics = metrics()
+metrics = Metrics()
 
 
 # Job Scheduler Functionality
-async def schedule_jobs(jobs: dict) -> None:
+async def schedule_jobs(jobs: dict[str, Any]) -> None:
     """
     Schedules jobs based on the provided configuration.
 
@@ -79,7 +80,7 @@ async def schedule_jobs(jobs: dict) -> None:
 
 
 async def update_job_status(
-    session, job: Jobs, status: JobStatus, error: str | None = None
+    session: AsyncSession, job: Jobs, status: JobStatus, error: str | None = None
 ) -> None:
     """
     Helper function to update job status after running.
@@ -107,9 +108,9 @@ async def handle_run_task(
     session: AsyncSession,
     task_name: str,
     job_name: str | None,
-    task_function: Callable,
-    *args,
-    **kwargs,
+    task_function: Callable[..., Awaitable[Any]],
+    *args: Any,
+    **kwargs: Any,
 ) -> None:
     """
     Helper function to run a task and update its status if job_name is provided.
@@ -208,32 +209,38 @@ async def resend_outbox_events(session: AsyncSession) -> None:
     """
     try:
         failed_events = await get_failed_outbox_events(session)
-    except Exception as e:
-        logger.error(f"Error fetching failed outbox events: {str(e)}")
-        return
-
-    for event in failed_events:
-        metrics.OUTBOX_EVENTS_RESENT_TOTAL.labels(reason="failed").inc()
-        await handle_publish_event(
-            session=session, event=event, event_schema=event.data
-        )
-
-        event.retries += 1
-
-    await session.commit()
-
-    try:
         pending_events = await get_pending_outbox_events(session, time=10)
     except Exception as e:
-        logger.error(f"Error fetching pending outbox events: {str(e)}")
+        logger.error(f"Error fetching outbox events: {str(e)}")
         return
 
-    for event in pending_events:
-        metrics.OUTBOX_EVENTS_RESENT_TOTAL.labels(reason="pending").inc()
+    all_events_to_resend = failed_events + pending_events
+
+    for event in all_events_to_resend:
+        if not isinstance(event.data, dict) or not event.data:
+            logger.warning(f"Skipping event {event.id} due to invalid or empty data.")
+            continue
+
+        try:
+            # Dynamically create a model for the event data
+            GenericEventModel = create_model(
+                "GenericEventModel",
+                **{k: (type(v), ...) for k, v in event.data.items()},
+            )  # type: ignore[call-overload]
+
+            event_schema_to_publish = GenericEventModel.model_validate(event.data)
+
+        except ValidationError as e:
+            logger.error(f"Failed to validate data for event {event.id}: {e}")
+            event.status = EventStatus.failed
+            event.error_message = f"Data validation failed: {e}"
+            continue
+
         await handle_publish_event(
-            session=session, event=event, event_schema=event.data
+            session=session, event=event, event_schema=event_schema_to_publish
         )
 
+        metrics.OUTBOX_EVENTS_RESENT_TOTAL.labels(reason=event.status.value).inc()
         event.retries += 1
 
     await session.commit()

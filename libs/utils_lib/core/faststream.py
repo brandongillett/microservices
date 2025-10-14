@@ -3,7 +3,7 @@ import logging
 from faststream.nats import NatsBroker
 from faststream.nats.fastapi import NatsRouter
 from nats.aio.client import Client as NATS
-from nats.js.api import StreamConfig
+from nats.js.api import DiscardPolicy, RetentionPolicy, StorageType, StreamConfig
 from nats.js.errors import NotFoundError
 
 from libs.utils_lib.core.config import settings as utils_lib_settings
@@ -27,12 +27,12 @@ class NatsClient:
         self.stream_config = StreamConfig(
             name=self.stream,
             subjects=[f"{settings.SERVICE_NAME}.>"],
-            retention="limits",
+            retention=RetentionPolicy.LIMITS,
             max_msgs=-1,
             max_bytes=-1,
             max_age=86400 * 3,  # 3 days
-            storage="file",
-            discard="old",
+            storage=StorageType.FILE,
+            discard=DiscardPolicy.OLD,
             num_replicas=1,
         )
 

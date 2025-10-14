@@ -103,7 +103,7 @@ async def event_processed_helper(
                 session=new_session, event_id=event_id
             )
 
-        if outbox_event.status == EventStatus.processed:
-            return True
+            if outbox_event and outbox_event.status == EventStatus.processed:
+                return True
 
     return False

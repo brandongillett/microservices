@@ -10,7 +10,7 @@ from libs.utils_lib.core.config import settings as utils_libs_settings
 
 
 # Security Settings
-class security_settings(BaseSettings):
+class SecuritySettings(BaseSettings):
     # Hashing algorithm (for tokens)
     ALGORITHM: str = "HS256"
     # Username and password constraints
@@ -26,7 +26,7 @@ class security_settings(BaseSettings):
     PASSWORD_RESET_EXPIRES_MINUTES: int = 15
 
 
-security_settings = security_settings()  # type: ignore
+security_settings = SecuritySettings()
 
 
 # JTI token extraction
@@ -72,7 +72,7 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
         bool: True if the passwords match, False otherwise.
     """
 
-    def verify():
+    def verify() -> bool:
         try:
             pwd_context.verify(hashed_password, plain_password)
             return True

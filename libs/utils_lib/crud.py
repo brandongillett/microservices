@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import select
@@ -12,7 +13,7 @@ async def create_inbox_event(
     session: AsyncSession,
     event_id: UUID,
     event_type: str,
-    data: dict,
+    data: dict[str, Any],
     commit: bool = True,
 ) -> EventInbox:
     """
@@ -58,7 +59,7 @@ async def create_outbox_event(
     session: AsyncSession,
     event_id: UUID,
     event_type: str,
-    data: dict,
+    data: dict[str, Any],
     commit: bool = True,
 ) -> EventOutbox:
     """
@@ -111,7 +112,7 @@ async def get_failed_outbox_events(session: AsyncSession) -> list[EventOutbox]:
     """
     stmt = select(EventOutbox).where(EventOutbox.status == EventStatus.failed)
     result = await session.exec(stmt)
-    return result.all()
+    return list(result.all())
 
 
 async def get_pending_outbox_events(
@@ -138,7 +139,7 @@ async def get_pending_outbox_events(
         stmt = select(EventOutbox).where(EventOutbox.status == EventStatus.pending)
 
     result = await session.exec(stmt)
-    return result.all()
+    return list(result.all())
 
 
 # CRUD operations for Tasks
@@ -148,9 +149,9 @@ async def create_job(
     job_name: str,
     next_run: datetime,
     task_name: str,
-    args: dict,
-    kwargs: dict,
-    labels: dict,
+    args: list[Any],
+    kwargs: dict[str, Any],
+    labels: dict[str, Any],
     cron: str | None = None,
     time: datetime | None = None,
     persistent: bool = False,
@@ -226,11 +227,11 @@ async def get_jobs(session: AsyncSession, get_enabled: bool = False) -> list[Job
         list[Jobs]: The list of jobs.
     """
     if get_enabled:
-        stmt = select(Jobs).where(Jobs.enabled.is_(True))
+        stmt = select(Jobs).where(Jobs.enabled.is_(True))  # type: ignore[attr-defined]
     else:
         stmt = select(Jobs)
     result = await session.exec(stmt)
-    return result.all()
+    return list(result.all())
 
 
 async def get_job_by_name(session: AsyncSession, job_name: str) -> Jobs | None:
@@ -263,12 +264,12 @@ async def get_persistent_failed_jobs(
         list[Jobs]: The list of persistent failed jobs.
     """
     stmt = select(Jobs).where(
-        Jobs.enabled.is_(True),
-        Jobs.persistent.is_(True),
+        Jobs.enabled.is_(True),  # type: ignore[attr-defined]
+        Jobs.persistent.is_(True),  # type: ignore[attr-defined]
         Jobs.last_run_status == JobStatus.failed,
     )
     result = await session.exec(stmt)
-    return result.all()
+    return list(result.all())
 
 
 async def get_persistent_missed_jobs(
@@ -287,21 +288,21 @@ async def get_persistent_missed_jobs(
     missed_time = datetime.utcnow() - timedelta(minutes=1)
 
     stmt1 = select(Jobs).where(
-        Jobs.enabled.is_(True),
-        Jobs.persistent.is_(True),
+        Jobs.enabled.is_(True),  # type: ignore[attr-defined]
+        Jobs.persistent.is_(True),  # type: ignore[attr-defined]
         Jobs.last_run is not None,
         Jobs.next_run < missed_time,
-        Jobs.last_run < Jobs.next_run,
+        Jobs.last_run < Jobs.next_run,  # type: ignore[operator]
     )
 
     stmt2 = select(Jobs).where(
-        Jobs.enabled.is_(True),
-        Jobs.persistent.is_(True),
-        Jobs.last_run.is_(None),
+        Jobs.enabled.is_(True),  # type: ignore[attr-defined]
+        Jobs.persistent.is_(True),  # type: ignore[attr-defined]
+        Jobs.last_run.is_(None),  # type: ignore[union-attr]
         Jobs.next_run < missed_time,
     )
 
     result1 = await session.exec(stmt1)
     result2 = await session.exec(stmt2)
 
-    return result1.all() + result2.all()
+    return list(result1.all()) + list(result2.all())

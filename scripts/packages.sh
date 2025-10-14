@@ -28,7 +28,7 @@ update_package() {
 
     if is_package_in_dependencies "$package_name"; then
         echo -e "${CYAN}Updating package $package_name in $service_name...${NC}"
-        uv remove "$package_name" > /dev/null 2>&1 && uv add "$package_name" > /dev/null 2>&1
+        uv lock --upgrade-package "$package_name" > /dev/null 2>&1
     else
         echo -e "${YELLOW}Package $package_name not found in $service_name dependencies. Skipping...${NC}"
     fi

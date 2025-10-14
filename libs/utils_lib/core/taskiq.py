@@ -1,5 +1,8 @@
 import logging
 from datetime import datetime
+from threading import Thread
+from typing import Any
+from wsgiref.simple_server import WSGIServer
 
 from croniter import croniter
 from prometheus_client import start_http_server
@@ -33,8 +36,8 @@ class MyScheduleSource(ScheduleSource):
     ) -> None:
         self.session_manager = session_manager
         self.redis_client = redis_client
-        self.prometheus_server = None
-        self.prometheus_thread = None
+        self.prometheus_server: WSGIServer | None = None
+        self.prometheus_thread: Thread | None = None
 
     async def startup(self) -> None:
         """
@@ -51,8 +54,10 @@ class MyScheduleSource(ScheduleSource):
         Shutdown the schedule source.
         """
         # Shutdown Prometheus metrics server
-        self.prometheus_server.shutdown()
-        self.prometheus_thread.join()
+        if self.prometheus_server:
+            self.prometheus_server.shutdown()
+        if self.prometheus_thread:
+            self.prometheus_thread.join()
         # Close database and Redis connections
         await self.session_manager.close()
         await self.redis_client.close()
@@ -82,12 +87,12 @@ class MyScheduleSource(ScheduleSource):
             if not schedule.labels["job_name"]:
                 raise ValueError("Label 'job_name' is required")
 
-            job_name = schedule.labels.get("job_name")
+            job_name = str(schedule.labels.get("job_name"))
             persistent = schedule.labels.get("persistent", False)
             if isinstance(persistent, str):
                 persistent = persistent.lower() == "true"
 
-            redis = self.redis_client.client
+            redis = self.redis_client.get_client()
 
             lock_key = f"lock:add_schedule:{schedule.schedule_id}"
             lock = await redis.set(lock_key, "lock", nx=True, ex=30)
@@ -106,6 +111,11 @@ class MyScheduleSource(ScheduleSource):
             if schedule.cron:
                 cron_next_run = croniter(schedule.cron, datetime.utcnow())
                 next_run = cron_next_run.get_next(datetime)
+
+            if next_run is None:
+                raise ValueError(
+                    f"Job '{job_name}' has no valid next run time (cron or time must be set)."
+                )
 
             # Check if the job already exists
             existing_job = await get_job_by_name(session=session, job_name=job_name)
@@ -182,7 +192,7 @@ class MyScheduleSource(ScheduleSource):
         Args:
             task (ScheduledTask): The scheduled task.
         """
-        redis = self.redis_client.client
+        redis = self.redis_client.get_client()
         lock = await redis.set(
             f"lock:schedule:{task.schedule_id}", "lock", nx=True, ex=30
         )
@@ -204,14 +214,15 @@ class MyScheduleSource(ScheduleSource):
                 job = await get_job_by_name(
                     session=session, job_name=task.labels["job_name"]
                 )
-                cron_next_run = croniter(job.cron, datetime.utcnow())
-                job.next_run = cron_next_run.get_next(datetime)
+                if job and job.cron:
+                    cron_next_run = croniter(job.cron, datetime.utcnow())
+                    job.next_run = cron_next_run.get_next(datetime)
 
-                await session.commit()
-                await session.refresh(job)
+                    await session.commit()
+                    await session.refresh(job)
 
 
-result_backend = RedisAsyncResultBackend(
+result_backend: RedisAsyncResultBackend[Any] = RedisAsyncResultBackend(
     utils_lib_settings.REDIS_URL, result_ex_time=900
 )
 
