@@ -1,6 +1,8 @@
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from tests.utils.utils import create_random_user_helper
+
 from libs.auth_lib.core.security import verify_password
 from libs.users_lib.crud import (
     get_user,
@@ -14,7 +16,6 @@ from libs.users_lib.models import UserRole
 from libs.utils_lib.tests.utils.utils import (
     random_lower_string,
 )
-from tests.utils.utils import create_random_user_helper
 
 
 @pytest.mark.anyio

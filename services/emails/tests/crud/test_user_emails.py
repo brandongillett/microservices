@@ -1,6 +1,8 @@
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from tests.utils.utils import create_random_user_helper
+
 from libs.utils_lib.tests.utils.utils import (
     random_lower_string,
 )
@@ -11,7 +13,6 @@ from src.crud import (
     update_user_username,
     verify_user_email,
 )
-from tests.utils.utils import create_random_user_helper
 
 
 @pytest.mark.anyio

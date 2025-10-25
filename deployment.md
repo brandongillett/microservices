@@ -70,7 +70,7 @@ The number of replicas for each service is defined by variables at the top of th
 
 The target CPU architecture for the Docker images is controlled by the `DOCKER_PLATFORMS` variable in the workflow files. You can specify one or more platforms separated by commas.
 
-```
+```yaml
 DOCKER_PLATFORMS: linux/arm64 # ex. linux/amd64,linux/arm64
 ```
 

@@ -1,5 +1,51 @@
 # Services
 
+## Service Architecture & Structure
+
+All components of this backend—including microservices, workers, and schedulers—adhere to a **strict, uniform architecture and naming convention**. This standardization is essential for easier management, automation, and faster developer context-switching across the entire system.
+
+### Service Uniformity and Naming Conventions
+
+Maintaining consistent naming for services, containers, and configuration variables is mandatory. All names must be **all lowercase** and descriptive of the service's core function.
+
+#### Key Naming Conventions
+
+| Component                   | Standard                                                   | Example                          | Notes                                                                                         |
+| :-------------------------- | :--------------------------------------------------------- | :------------------------------- | :-------------------------------------------------------------------------------------------- |
+| **Service Folder**          | Core functionality, all lowercase.                         | `./services/auth`                | Located in the top-level `services/` directory.                                               |
+| **Docker Container**        | All lowercase, matches the service name.                   | `auth`                           | Name used within `docker-compose.yml`.                                                        |
+| **`SERVICE_NAME` Variable** | Must match the service folder/container name.              | `SERVICE_NAME: str = "auth"`     | Set in `src/core/config.py` within the service. Critical for configuration and event routing. |
+| **Database Variable**       | Service-specific database name is passed to the container. | `POSTGRES_DB: ${AUTH_DATABASE?}` | Defined in `.env` file and passed through `docker-compose.yml`.                               |
+
+#### Required Scripts
+
+For global automation (GitHub Actions, development scripts), every service must contain a `scripts/` folder with the following two bash files:
+
+- **`run-tests.sh`**: For running tests on that specific service.
+- **`lint.sh`**: For running lint checks and code quality standards.
+
+### Standard Service Structure
+
+The directory structure is identical for every service, worker, and scheduler, ensuring consistency.
+
+| Folder/File         | Purpose                                                                                                                       | Example Path                       |
+| :------------------ | :---------------------------------------------------------------------------------------------------------------------------- | :--------------------------------- |
+| **`src/`**          | The core application source code.                                                                                             | `services/{SERVICE}/src/`          |
+| **`src/main.py`**   | The main service entry point. Initializes the FastAPI app, defines routers, and **manually sets the default API version**.    | `services/{SERVICE}/src/main.py`   |
+| **`src/api/{vX}/`** | **Versioned API Endpoints.** A specific API version folder (e.g., `v1`, `v2`). Contains the endpoint routes for that version. | `services/{SERVICE}/src/api/v1/`   |
+| **`src/models.py`** | Defines the database schema (SQLAlchemy models) for the service. Used by Alembic for migrations.                              | `services/{SERVICE}/src/models.py` |
+| **`tests/`**        | Houses all unit and integration tests for the service.                                                                        | `services/{SERVICE}/tests/`        |
+| **`alembic/`**      | Database migration files.                                                                                                     | `services/{SERVICE}/alembic/`      |
+
+### Shared Libraries (`libs/`) Inheritance
+
+The root-level **`libs/`** directory contains centralized, reusable code. Services consume this code directly, eliminating duplication and enforcing global consistency for critical features (like security and event handling).
+
+| Library Example       | Core Functionality                        | Purpose and Usage                                                                                                                                              |
+| :-------------------- | :---------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`libs/auth_lib/`**  | **Role-Based Access Control (RBAC)**      | Centralizes all authentication and authorization logic. Services import dependencies (e.g., `gen_auth_token_dep`) to secure endpoints and retrieve user roles. |
+| **`libs/utils_lib/`** | **Standard Shared Service Functionality** | Provides common base schemas/tables, database session helpers, event routing logic, and general utilities used across all services.                            |
+
 ## Tests
 
 In each service of this project, we have implemented automated testing to ensure code quality and functionality.
@@ -7,13 +53,13 @@ By default, tests are configured to run automatically using GitHub Actions whene
 
 You can execute all tests using the following bash script, which will completely wipe volumes and rebuild the containers:
 
-```
+```bash
 bash scripts/test.sh
 ```
 
 If your containers are already running and you want to execute the tests without stopping the current processes, you can run tests for each service (e.g. auth):
 
-```
+```bash
 docker compose exec -t auth bash scripts/run-tests.sh
 ```
 
@@ -29,13 +75,13 @@ In addition to the pre-commit hook, you can manually run lint checks using the s
 
 You can execute all linters using the following bash script, which will completely wipe volumes and rebuild the containers:
 
-```
+```bash
 bash scripts/lint.sh
 ```
 
 If your containers are already running and you want to execute the linter without stopping the current processes, run the following command in the desired services container (e.g. auth)
 
-```
+```bash
 docker compose exec -t auth bash scripts/lint.sh
 ```
 
@@ -70,7 +116,7 @@ To create a new version for a desired service while ensuring backward compatibil
 5. At the top of `./services/{SERVICE}/src/main.py`, import the new router: `from src.api.v2.main import api_router as v2_router`
 6. Create a new FastAPI app instance for version `v2` and mount it to the main app:
 
-```
+```python
 app_v2 = FastAPI(version="v2", title=settings.PROJECT_NAME, docs_url=settings.DOCS_URL)
 
 app_v2.include_router(v2_router)
@@ -91,54 +137,23 @@ Follow these steps to make database schema changes for the desired service:
 2. Start a shell session in the desired service (e.g. auth)
    Open a terminal and run the following command (while containers are running):
 
-```
+```bash
 docker compose exec auth bash
 ```
 
 3. Run the Autogenerate Revision
    Use Alembic to create a new migration file that reflects the changes made in the models. Run the following command, replacing the message with a descriptive one about your changes:
 
-```
+```bash
 alembic revision --autogenerate -m "{INSERT DESCRIPTION OF CHANGES HERE}"
 ```
 
 5. Apply the Migration
    To apply the new migration and update your database schema, run:
 
-```
+```bash
 alembic upgrade head
 ```
-
-## Service Uniformity
-
-In this project, it is essential to maintain consistent naming conventions for all services, Docker containers, and configuration variables. Adhering to these standards ensures uniformity and easier management across the entire system.
-
-### Service Folder Naming
-
-- Every service folder in the `services/` directory must be named according to the service's core functionality, using lowercase letters.
-- Example: The authentication service should be named `auth`.
-
-### Docker Container Naming
-
-- When creating the Docker container for each service, it should be named all lowercase: `{service-name}`.
-- For example: the authentication service would be named `auth`
-
-### Environment Variables
-
-- The `.env` file will define most of the environment variables used for local development. However, some variables are service-specific in `docker-compose.yml`. For example, each service must pass the environment variable `POSTGRES_DB` for database configuration. Ensure that the value of `POSTGRES_DB` corresponds to the service being developed.
-- Example in docker-compose.yml for the `auth` service:
-
-```
-services:
-  auth:
-    environment:
-      POSTGRES_DB: ${AUTH_DATABASE?Variable not set}
-```
-
-### Other Configurations
-
-- In the src/core/config.py file, there is a critical variable called `SERVICE_NAME`. This variable should always be updated to match the name of the service (e.g. for the `auth` service: `SERVICE_NAME: str = "auth"`).
-- Each service should contain a `lint.sh` and a `run-tests.sh` in the scripts folder, this ensures you are able to run the global `scripts/test.sh` and `scripts/lint.sh` files for testing/linting all services (also used for github actions on commit).
 
 ## Role-Based Access & User Dependencies
 
@@ -332,4 +347,8 @@ async def create_user_event(session: async_session_dep, data: CreateUserEvent) -
 
 # Prometheus Metrics
 
-Pending...
+Prometheus serves as the primary source of monitoring for this project. All services, schedulers, and workers are instrumented to expose performance and operational metrics.
+
+## Metrics Endpoint and Access
+
+The metrics endpoint is exposed uniformly by every component on port `9000` inside the container. The standard path is /metrics.

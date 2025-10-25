@@ -23,7 +23,7 @@
 
 To run the local development environment, use the following command (in a separate terminal):
 
-```
+```bash
 docker compose up --build --watch
 ```
 
@@ -71,7 +71,7 @@ This project utilizes a virtual environment to manage dependencies effectively. 
 
 Once you have `uv` installed, navigate to the desired service in the `./services/` directory and install all the required dependencies with the following command:
 
-```
+```bash
 uv sync
 ```
 
@@ -81,7 +81,7 @@ This command will set up the virtual environment and install the necessary packa
 
 After installing the dependencies, you can activate the virtual environment with the following command from the service directory `e.g. ./services/auth`:
 
-```
+```bash
 source .venv/bin/activate
 ```
 
@@ -95,7 +95,7 @@ Instead of running pre-commit directly, use the formatting script `scripts/forma
 
 To format and check all files, run:
 
-```
+```bash
 bash scripts/format.sh
 ```
 

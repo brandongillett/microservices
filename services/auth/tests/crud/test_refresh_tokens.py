@@ -4,6 +4,8 @@ from uuid import uuid4
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from tests.utils.utils import create_user_and_token_helper
+
 from src.api.config import api_settings
 from src.crud import (
     authenticate_refresh_token,
@@ -15,7 +17,6 @@ from src.crud import (
     get_refresh_tokens,
 )
 from src.schemas import RefreshTokenCreate
-from tests.utils.utils import create_user_and_token_helper
 
 
 @pytest.mark.anyio
