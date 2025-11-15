@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { tokens } from "@/tokens/getTokens";
 
-// Use your actual design tokens!
 const { color: colors } = tokens;
 
 function Navbar() {

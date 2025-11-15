@@ -19,7 +19,6 @@ export function Footer() {
 		>
 			<Container maxW="6xl">
 				<VStack gap={6}>
-					{/* Ready to Match Section */}
 					<VStack gap={4}>
 						<Text
 							fontSize={{ base: "xl", md: "2xl" }}

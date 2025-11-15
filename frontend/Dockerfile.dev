@@ -1,14 +1,10 @@
-# Stage 1: Base image with Node.js for development
-FROM node:20 AS development-stage
+FROM node:20
 
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json /app/
 RUN npm install
 
-# Copy the rest of the application files
 COPY ./ /app/
 
-# Use the development server to enable hot reloading
 CMD ["npm", "run", "dev", "--host"]

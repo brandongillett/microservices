@@ -26,7 +26,6 @@ const NotFound = () => {
 			position="relative"
 			overflow="hidden"
 		>
-			{/* Animated Background Elements */}
 			<Box
 				position="absolute"
 				top="10%"
@@ -68,9 +67,7 @@ const NotFound = () => {
 					position="relative"
 					zIndex={2}
 				>
-					{/* Centered 404 Message */}
 					<VStack gap={8} textAlign="center" maxW="600px">
-						{/* 404 Number with Gradient */}
 						<Box position="relative">
 							<Text
 								fontSize={{ base: "8xl", md: "9xl", lg: "10xl" }}
@@ -97,7 +94,6 @@ const NotFound = () => {
 							</Text>
 						</Box>
 
-						{/* Title and Description */}
 						<VStack gap={4}>
 							<Text
 								fontSize={{ base: "2xl", md: "3xl" }}
@@ -118,7 +114,6 @@ const NotFound = () => {
 							</Text>
 						</VStack>
 
-						{/* Go Home Button */}
 						<Box pt={4}>
 							<Link to="/">
 								<Button

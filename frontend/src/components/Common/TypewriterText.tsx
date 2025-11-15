@@ -28,22 +28,19 @@ export function TypewriterText({
 
 	useEffect(() => {
 		if (currentIndex < text.length) {
-			// Vary typing speed for more natural feel
-			const speed = Math.random() * 100 + 80; // 80-180ms variation
+			const speed = Math.random() * 100 + 80;
 			const timer = setTimeout(() => {
 				setCurrentIndex(currentIndex + 1);
 			}, speed);
 
 			return () => clearTimeout(timer);
 		} else {
-			// Finished typing, immediately hide cursor
 			setIsTyping(false);
 			setIsComplete(true);
 			setShowCursor(false);
 		}
 	}, [currentIndex, text.length]);
 
-	// Cursor blinking - only when not typing and not complete
 	useEffect(() => {
 		if (!isComplete) {
 			if (isTyping) {
