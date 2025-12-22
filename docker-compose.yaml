@@ -10,7 +10,7 @@ x-build: &build
 
 services:
   proxy:
-    image: traefik:3.1.6
+    image: traefik:3.6.5
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
