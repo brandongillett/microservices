@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Assets URL
     ASSETS_URL: str = f"{utils_lib_settings.FRONTEND_HOST}/assets"
 
+    # Logo URL
+    LOGO_URL: str = f"{ASSETS_URL}/images/logo.svg"
+
     # Tokens URL (for retrieving design tokens)
     @computed_field  # type: ignore[prop-decorator]
     @property
