@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     DOMAIN: str = "localhost"
     PROJECT_NAME: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-    FRONTEND_HOST: str = "http://localhost:5173"
+    FRONTEND_HOST: str = "http://localhost"
+    STATIC_ASSETS_HOST: str = "http://static.localhost"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ROOT_USER_PASSWORD: str | None = None
 
@@ -72,7 +73,7 @@ class Settings(BaseSettings):
             list[str]: A list of allowed CORS origins.
         """
         # Fix this to allow api.{DOMAIN} to avoid CORS issues
-        return [self.FRONTEND_HOST]
+        return [self.FRONTEND_HOST, self.STATIC_ASSETS_HOST]
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -17,11 +17,8 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: str
     EMAILS_FROM_NAME: str | None = None
 
-    # Assets URL
-    ASSETS_URL: str = f"{utils_lib_settings.FRONTEND_HOST}/assets"
-
     # Logo URL
-    LOGO_URL: str = f"{ASSETS_URL}/images/logo.svg"
+    LOGO_URL: str = f"{utils_lib_settings.STATIC_ASSETS_HOST}/images/logo.svg"
 
     # Tokens URL (for retrieving design tokens)
     @computed_field  # type: ignore[prop-decorator]
@@ -35,9 +32,9 @@ class Settings(BaseSettings):
         """
         # Tokens are rendered in the container so internal URLs are used in dev
         return (
-            "http://frontend/assets/tokens"
+            "http://static-assets/tokens"
             if utils_lib_settings.ENVIRONMENT == "local"
-            else f"{self.ASSETS_URL}/tokens"
+            else f"{utils_lib_settings.STATIC_ASSETS_HOST}/tokens"
         )
 
 

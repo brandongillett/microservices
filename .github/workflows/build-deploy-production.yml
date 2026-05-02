@@ -35,7 +35,6 @@ jobs:
       DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
       PROJECT_NAME: ${{ secrets.PROJECT_NAME }}
       FRONTEND_HOST: https://${{ secrets.PRODUCTION_DOMAIN }}
-      VITE_API_URL: https://api.${{ secrets.PRODUCTION_DOMAIN }}
       # Build settings
       STACK_NAME: ${{ secrets.PRODUCTION_STACK_NAME }}
       DOCKER_PLATFORMS: linux/arm64 # ex. linux/amd64,linux/arm64
@@ -44,9 +43,6 @@ jobs:
       NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
       DATABASE_NAMESPACE: ${{ secrets.PRODUCTION_DATABASE_NAMESPACE }}
       # Replica settings
-      # Frontend
-      FRONTEND_REPLICAS: 3
-      # Services
       AUTH_REPLICAS: 3
       USERS_REPLICAS: 3
       EMAILS_REPLICAS: 3
@@ -69,14 +65,10 @@ jobs:
         id: detect
         run: |
           mapfile -t files < <(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
-          services=(); build_frontend=false
+          services=()
 
           for f in "${files[@]}"; do
             case "$f" in
-              # any change in frontend code or its k8s manifests
-              frontend/*|k8s/frontend/*)
-                build_frontend=true
-                ;;
               # any change in libs (rebuild all services)
               libs/*)
                 for dir in services/*/; do
@@ -103,10 +95,8 @@ jobs:
           services=( $(printf "%s\n" "${services[@]}" | sort -u) )
 
           echo "→ Services to build: ${services[*]:-(none)}"
-          echo "→ Build frontend: $build_frontend"
 
           echo "services=$(IFS=,; echo "${services[*]}")" >> $GITHUB_OUTPUT
-          echo "build_frontend=$build_frontend"       >> $GITHUB_OUTPUT
 
       # 2) Install tools & authenticate
       - name: Log in to Docker Hub
@@ -143,19 +133,7 @@ jobs:
             rm -rf services/$svc/libs
           done
 
-      # 4) Build & push frontend
-      - name: Build & push frontend
-        if: steps.detect.outputs.build_frontend == 'true'
-        run: |
-          image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
-          echo "→ Building frontend with image: $image"
-          docker buildx build \
-            --platform $DOCKER_PLATFORMS \
-            --build-arg VITE_API_URL=${VITE_API_URL} \
-            -t "$image" \
-            --push frontend
-
-      # 5) Configure kubectl with config
+      # 4) Configure kubectl with config
       - name: Set up kubeconfig
         run: |
           mkdir -p $HOME/.kube
@@ -171,7 +149,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
           kubectl create secret generic postgres-secrets \
-            --from-literal=POSTGRES_PASSWORD="${{ secrets.PRODUCTION_DB_PASSWORD }}" \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.PRODUCTION_POSTGRES_PASSWORD }}" \
             --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
           kubectl create secret generic nats-secrets \
@@ -190,7 +168,7 @@ jobs:
             --from-literal=SMTP_PASSWORD="${{ secrets.PRODUCTION_SMTP_PASSWORD }}" \
             --dry-run=client -o yaml | kubectl apply --namespace "${NAMESPACE}" -f -
 
-      # 6) Deploy changed services
+      # 5) Deploy changed services
       - name: Deploy services to Kubernetes
         if: steps.detect.outputs.services != ''
         run: |
@@ -201,14 +179,4 @@ jobs:
             for manifest in k8s/services/$svc/*; do
               envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
             done
-          done
-
-      # 7) Deploy frontend
-      - name: Deploy frontend to Kubernetes
-        if: steps.detect.outputs.build_frontend == 'true'
-        run: |
-          export IMAGE=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-frontend:${BUILD_TAG}
-          echo "→ Deploying frontend with image: $IMAGE"
-          for manifest in k8s/frontend/*; do
-            envsubst < "$manifest" | kubectl apply --namespace "${NAMESPACE}" -f -
           done

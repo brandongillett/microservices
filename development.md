@@ -7,7 +7,7 @@
 <h3 align=center>Local Endpoints (Default)</h3>
 
 <h4 align="center">
-  Frontend: <a href="http://localhost/">http://localhost/</a><br>
+  Static Assets: <a href="http://static.localhost/">http://static.localhost/</a><br>
   Adminer: <a href="http://adminer.localhost/">http://adminer.localhost/</a><br>
   NATS: <a href="http://nats.localhost/">http://nats.localhost/</a><br>
   MailCatcher: <a href="http://mailcatcher.localhost/">http://mailcatcher.localhost/</a><br>

@@ -92,7 +92,7 @@ async def get_base_context() -> dict[str, Any]:
     return {
         "project_name": utils_lib_settings.PROJECT_NAME,
         "project_url": utils_lib_settings.FRONTEND_HOST,
-        "assets_url": settings.ASSETS_URL,
+        "assets_url": utils_lib_settings.STATIC_ASSETS_HOST,
         "logo_url": settings.LOGO_URL,
         "tokens": _cached_tokens,
     }

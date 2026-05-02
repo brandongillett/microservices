@@ -24,7 +24,7 @@ Before deploying, ensure the following infrastructure is set up and accessible:
 
 This section covers the core concepts needed to understand and manage the deployment process.
 
-- **Directory Structure:** The deploy actions rely on a strict naming convention. Each service in `k8s/services/` must have a corresponding folder in `services/` with the exact same name (all lowercase). The frontend manifests are located in `k8s/frontend/`.
+- **Directory Structure:** The deploy actions rely on a strict naming convention. Each service in `k8s/services/` must have a corresponding folder in `services/` with the exact same name (all lowercase).
 - **Variable Substitution:** The Kubernetes manifests (`.yaml` files) are templates. Values like `${IMAGE}` are substituted by the GitHub Actions workflow. Use this pattern when adding new services.
 - **Skipping Deployments:** A build/deploy workflow for an environment will be skipped if its `{ENV}_KUBE_CONFIG` secret is not found. This is useful for disabling a staging environment without modifying workflow files.
 - **Private Images:** The workflows push images to a container registry. It is your responsibility to ensure the registry repositories are private and secure.
@@ -84,7 +84,7 @@ To disable, remove the `driver: cloud` and the `endpoint` lines from the `Set up
 
 ### Smart Deployments (Change Detection)
 
-To save build time and resources, the CI/CD pipeline automatically detects which services have changed in a given commit. Only the images for the modified services (and the frontend) are rebuilt and redeployed. This is ideal for a monorepo architecture.
+To save build time and resources, the CI/CD pipeline automatically detects which services have changed in a given commit. Only modified services are rebuilt and redeployed. This is ideal for a monorepo architecture.
 
 ### Rolling Deployments
 

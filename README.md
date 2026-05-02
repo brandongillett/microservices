@@ -1,11 +1,11 @@
 # 🧩 Microservices Boilerplate
 
-A production-ready boilerplate for building scalable, event-driven microservices with Python, React, and Kubernetes.
+A production-ready boilerplate for building scalable, event-driven microservices in Python FastAPI.
 
 ## 🧠 Backend: Python Microservices
 
 - ⚡ **FastAPI** – Async APIs for high-throughput service endpoints
-- 🔄 **FastStream** – Event-driven inter-service communication over **NATS JetStream**
+- 🔄 **FastStream** – Event-driven inter-service communication over NATS JetStream
 - 🧮 **TaskIQ** – Async task scheduler and background worker system
 - 🧰 **Alembic** – Database schema migrations
 - 📊 **Prometheus** – Metrics collection and monitoring for endpoints and workers
@@ -26,20 +26,11 @@ A production-ready boilerplate for building scalable, event-driven microservices
 
 ---
 
-## 🎯 Frontend: React
-
-- ⚛️ **React + TypeScript** – Modern component-based web frontend
-- ⚡ **Vite** – Lightning-fast builds and hot module reload
-- 🎨 **Design Tokens** - Shared styling (colors, typography, spacing) for UI consistency across all applications
-- 🤖 **Playwright** – End-to-end testing of user flows and critical paths
-
----
-
 ## 🧪 DevOps
 
-- 🐙 **GitHub Actions** – CI/CD pipeline for linting, testing, and deploying changes to services/frontend (staging & production)
+- 🐙 **GitHub Actions** – CI/CD pipeline for linting, testing, and deploying changes to services (staging & production)
 - 🐳 **Docker Compose** – Local development environment
-- 💻 **Kubernetes** – YAML manifests for deployments for services / frontend
+- 💻 **Kubernetes** – YAML manifests for deployments for services
 - 🚀 **Rolling Updates** – Zero-downtime deployments
 
 ---
@@ -61,10 +52,6 @@ Development docs: [development.md](./development.md).
 Backend docs: [services/README.md](./services/README.md).
 
 ---
-
-## Frontend README
-
-Frontend docs: [frontend/README.md](./frontend/README.md).
 
 ## Acknowledgements
 
