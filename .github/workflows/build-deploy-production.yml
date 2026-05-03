@@ -43,9 +43,11 @@ jobs:
       NAMESPACE: ${{ secrets.PRODUCTION_NAMESPACE }}
       DATABASE_NAMESPACE: ${{ secrets.PRODUCTION_DATABASE_NAMESPACE }}
       # Replica settings
+      # Services
       AUTH_REPLICAS: 3
       USERS_REPLICAS: 3
       EMAILS_REPLICAS: 3
+      STATIC_ASSETS_REPLICAS: 3
       # Schedulers
       AUTH_SCHEDULER_REPLICAS: 3
       USERS_SCHEDULER_REPLICAS: 3
@@ -64,38 +66,15 @@ jobs:
       - name: Decide build & deploy targets
         id: detect
         run: |
-          mapfile -t files < <(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
           services=()
-
-          for f in "${files[@]}"; do
-            case "$f" in
-              # any change in libs (rebuild all services)
-              libs/*)
-                for dir in services/*/; do
-                  [[ -f "$dir/Dockerfile" ]] && services+=("$(basename "$dir")")
-                done
-                break
-                ;;
-              # any change in one of the services
-              services/*)
-                svc=${f#services/}
-                svc=${svc%%/*}
-                services+=( "$svc" )
-                ;;
-              # any change in one of the services' k8s manifests
-              k8s/services/*)
-                svc=${f#k8s/services/}
-                svc=${svc%%/*}
-                services+=( "$svc" )
-                ;;
-            esac
+          # Build all services
+          for dir in services/*/; do
+            if [[ -f "$dir/Dockerfile" ]]; then
+              services+=("$(basename "$dir")")
+            fi
           done
 
-          # dedupe
-          services=( $(printf "%s\n" "${services[@]}" | sort -u) )
-
           echo "→ Services to build: ${services[*]:-(none)}"
-
           echo "services=$(IFS=,; echo "${services[*]}")" >> $GITHUB_OUTPUT
 
       # 2) Install tools & authenticate
@@ -128,7 +107,10 @@ jobs:
           for svc in "${SVCS[@]}"; do
             image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
             echo "→ Building $svc with image: $image"
-            cp -r libs services/$svc/
+            # skip copying libs for static-assets
+            if [ "$svc" != "static-assets" ]; then
+              cp -r libs services/$svc/
+            fi
             docker buildx build --platform $DOCKER_PLATFORMS -t "$image" --push services/$svc/
             rm -rf services/$svc/libs
           done

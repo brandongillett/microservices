@@ -43,9 +43,11 @@ jobs:
       NAMESPACE: ${{ secrets.STAGING_NAMESPACE }}
       DATABASE_NAMESPACE: ${{ secrets.STAGING_DATABASE_NAMESPACE }}
       # Replica settings
+      # Services
       AUTH_REPLICAS: 2
       USERS_REPLICAS: 2
       EMAILS_REPLICAS: 2
+      STATIC_ASSETS_REPLICAS: 2
       # Schedulers
       AUTH_SCHEDULER_REPLICAS: 2
       USERS_SCHEDULER_REPLICAS: 2
@@ -128,7 +130,10 @@ jobs:
           for svc in "${SVCS[@]}"; do
             image=${{ secrets.DOCKER_USERNAME }}/${STACK_NAME}-${svc,,}:${BUILD_TAG}
             echo "→ Building $svc with image: $image"
-            cp -r libs services/$svc/
+            # skip copying libs for static-assets
+            if [ "$svc" != "static-assets" ]; then
+              cp -r libs services/$svc/
+            fi
             docker buildx build --platform $DOCKER_PLATFORMS -t "$image" --push services/$svc/
             rm -rf services/$svc/libs
           done

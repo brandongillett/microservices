@@ -82,9 +82,15 @@ To disable, remove the `driver: cloud` and the `endpoint` lines from the `Set up
 
 ## Key Features
 
-### Smart Deployments (Change Detection)
+### Hybrid Deployment Strategy
 
-To save build time and resources, the CI/CD pipeline automatically detects which services have changed in a given commit. Only modified services are rebuilt and redeployed. This is ideal for a monorepo architecture.
+#### 1. Staging: Differential Builds (Change Detection)
+
+For rapid deployments, the **_Staging_** pipeline automatically detects modified code (including shared `libs/` or specific `services/`). Only changed services are rebuilt and redeployed, significantly reducing build times and resource consumption during active development.
+
+#### 2. Production: Immutable Full Releases
+
+For **_Production_** releases, the pipeline force-builds and redeploys the **_entire stack_**. This eliminates the risk of "stale" code and ensures absolute consistency across all microservices.
 
 ### Rolling Deployments
 
