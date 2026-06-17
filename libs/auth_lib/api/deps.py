@@ -30,17 +30,17 @@ async def get_token_data(
     token: str, required_type: Literal["access", "refresh"]
 ) -> TokenData:
     """
-    Validates an access token and optionally checks if it's blacklisted.
+    Verifies the JWT token and extract token data.
 
     Args:
         token (str): The JWT access token.
-        blacklist_check (callable, optional): Function to check if the token is blacklisted.
+        required_type (Literal["access", "refresh"]): The expected type of the token.
 
     Returns:
-        UUID: The user ID extracted from the token.
+        TokenData: The users token data.
 
     Raises:
-        HTTPException: If the token is invalid, blacklisted, or malformed.
+        HTTPException: If the token is invalid or the user ID is not found.
     """
     try:
         payload = jwt.decode(
@@ -72,13 +72,13 @@ async def get_token_data(
 
 async def get_current_token_data(token: token_dep) -> TokenData:
     """
-    Get the current user ID from the token.
+    Gets the current token data from the provided token.
 
     Args:
         token (str): The token to decode.
 
     Returns:
-        UUID: The user ID.
+        TokenData: The decoded token data.
     """
     return await get_token_data(token=token, required_type="access")
 

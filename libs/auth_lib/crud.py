@@ -16,6 +16,7 @@ async def verify_user_email(
     Args:
         session (AsyncSession): The database session.
         user_id (UUID): The user ID.
+        commit (bool, optional): Whether to commit the changes to the database. Defaults to True.
 
     Returns:
         Users: The verified user.

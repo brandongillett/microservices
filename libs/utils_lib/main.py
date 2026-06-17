@@ -13,6 +13,12 @@ OPENAPI_PATH = f"./openapi/{settings.SERVICE_NAME}.json"
 
 
 def generate_openapi(app: FastAPI) -> None:
+    """
+    Generates the OpenAPI schema and saves it to a file.
+
+    Args:
+        app (FastAPI): The FastAPI application instance.
+    """
     openapi_data = app.openapi()
     openapi_json = json.dumps(openapi_data, indent=2, sort_keys=True)
     app.openapi_schema = None  # Clear the schema to avoid caching issues

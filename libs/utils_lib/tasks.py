@@ -156,15 +156,6 @@ async def rerun_persistent_jobs(session: AsyncSession) -> None:
     Args:
         session (AsyncSession): The database session.
     """
-
-    """
-    We want to rerun jobs where persistent is True &&
-    last_run_status == failed
-
-    also we want to rerun jobs where persistent is True &&
-
-    """
-
     try:
         missed_jobs = await get_persistent_missed_jobs(session)
     except Exception:

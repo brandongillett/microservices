@@ -18,6 +18,7 @@ async def get_user_id_from_request(request: Request) -> UUID | None:
 
     Args:
         request (Request): The incoming HTTP request.
+
     Returns:
         UUID | None: The user ID if extraction and validation are successful, otherwise None.
     """
@@ -57,7 +58,7 @@ def verify_email_verification_token(token: str) -> UUID:
         token (str): The token to verify
 
     Returns:
-        user_id (UUID): The user ID extracted from the token.
+        UUID: The user ID extracted from the token.
     """
     token_data = verify_url_token(
         token=token,
@@ -110,7 +111,7 @@ async def verify_password_reset_token(token: str) -> tuple[UUID, UUID]:
         token (str): The token to verify.
 
     Returns:
-        UUID: The user ID extracted from the token.
+        tuple[UUID, UUID]: A tuple containing the user ID and token ID extracted from the token.
     """
     token_data = verify_url_token(
         token=token,
